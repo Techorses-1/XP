@@ -1,0 +1,1837 @@
+// ============================================
+// GOOGLE FONTS IMPORT
+// ============================================
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+// ============================================
+// VARIABLES
+// ============================================
+$primary-color: #3f3f91;
+$primary-light: #6a6ac5;
+$primary-dark: #2d2f87;
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #e67e22;
+$info-color: #17a2b8;
+$muted-color: #95a5a6;
+$bg-color: #dfeafb;
+$white: #ffffff;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+$border-radius: 14px;
+$border-radius-sm: 8px;
+
+// ============================================
+// MAIN
+// ============================================
+.ws-main {
+    background: $bg-color !important;
+    font-family: 'Open Sans', sans-serif !important;
+    min-height: 100vh;
+    padding: 24px 28px 40px;
+}
+
+// ============================================
+// PAGE HEADER
+// ============================================
+.ws-page-header {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    padding: 18px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    h2 {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 22px;
+        font-weight: 700;
+        color: $primary-dark;
+        margin: 0;
+    }
+
+    .ws-right-section {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .ws-search-container {
+        position: relative;
+        width: 250px;
+
+        input {
+            width: 100%;
+            padding: 9px 14px 9px 38px;
+            border: 1.5px solid #e3e8f0;
+            border-radius: 50px;
+            background: #f5f7fa;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.25s;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-light;
+                background: $white;
+                box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+            }
+
+            &::placeholder {
+                color: #aab0bc;
+            }
+        }
+
+        .ws-search-icon {
+            position: absolute;
+            top: 50%;
+            left: 13px;
+            transform: translateY(-50%);
+            color: #aab0bc;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    }
+
+    .ws-action-buttons-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: $white;
+            padding: 9px 20px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            border-radius: 50px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.13);
+            letter-spacing: 0.2px;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+            }
+
+            &:active {
+                transform: translateY(0);
+            }
+        }
+
+        .ws-toggle-view-btn {
+            background: $muted-color;
+
+            &.ws-view-active {
+                background: linear-gradient(135deg, $primary-color, $primary-light);
+
+                &:hover {
+                    background: linear-gradient(135deg, $primary-dark, $primary-color);
+                }
+            }
+
+            &:hover {
+                background: #7f8c8d;
+                box-shadow: 0 5px 14px rgba(149, 165, 166, 0.35);
+            }
+        }
+
+        .ws-add-btn {
+            background: linear-gradient(135deg, $warning-color, #f39c12);
+
+            &:hover {
+                background: linear-gradient(135deg, #d35400, $warning-color);
+                box-shadow: 0 5px 14px rgba(230, 126, 34, 0.35);
+            }
+        }
+    }
+}
+
+// ============================================
+// SHARED FORM FIELD STYLES
+// Used by BOTH the main "Add Workshop" panel (.ws-form-container)
+// AND inside modals (.ws-modal-body) — Customer modal search/new-customer
+// fields + package <select>, etc. This is the fix: previously these
+// rules were scoped ONLY to .ws-form-container, so anything inside a
+// modal (like "Select Package") fell back to unstyled browser defaults.
+// ============================================
+.ws-form-container,
+.ws-modal-body {
+
+    .ws-form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+
+        .ws-form-field {
+            flex: 1;
+            min-width: 200px;
+        }
+    }
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 7px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 500;
+        font-size: 13.5px;
+        color: #555;
+    }
+
+    input[type='text'],
+    input[type='email'],
+    input[type='date'],
+    input[type='time'] {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        transition: border 0.25s, box-shadow 0.25s;
+        background: #fafbfc;
+        box-sizing: border-box;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &::placeholder {
+            color: #bfc5ce;
+        }
+    }
+
+    select {
+        width: 100%;
+        padding: 9px 36px 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background-color: #fafbfc;
+        box-sizing: border-box;
+        transition: border 0.25s, box-shadow 0.25s;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236a6ac5'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background-color: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &:disabled {
+            background-color: #f0f2f5;
+            cursor: not-allowed;
+            color: #aab0bc;
+        }
+
+        option {
+            font-family: 'Open Sans', sans-serif;
+        }
+    }
+
+    .ws-field-error-hint {
+        display: block;
+        color: $danger-color;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+}
+
+// ============================================
+// FORM CONTAINER (panel-specific layout/buttons)
+// ============================================
+.ws-form-container {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    padding: 28px 28px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    border-top: 3px solid $primary-light;
+
+    h2 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 22px;
+        color: $primary-color;
+    }
+
+    .ws-form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .ws-cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: #f0f2f8;
+        color: #555;
+        border: 1.5px solid #dde1ed;
+        padding: 10px 24px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #e5e8f0;
+            border-color: #c8cde0;
+        }
+    }
+
+    .ws-save-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: linear-gradient(135deg, $primary-color, $primary-light);
+        color: $white;
+        border: none;
+        padding: 10px 28px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, $primary-dark, $primary-color);
+            box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            background: #9e9ecc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    }
+}
+
+// ============================================
+// DATA TABLE
+// ============================================
+.ws-data-table {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+
+        thead {
+            background: #f7f8fc;
+            border-bottom: 1.5px solid #eaeef6;
+        }
+
+        th {
+            padding: 14px 20px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b6b9a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 13px 20px;
+            text-align: left;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #3a3a5c;
+            border-bottom: 1px solid #f0f2f8;
+        }
+
+        tr {
+            transition: background-color 0.15s;
+
+            &:last-child td {
+                border-bottom: none;
+            }
+
+            &:hover td {
+                background-color: #f5f6fb;
+            }
+        }
+
+        td.ws-date-cell {
+            font-weight: 500;
+        }
+
+        td.ws-time-cell strong {
+            font-family: 'Roboto', sans-serif;
+            color: $primary-color;
+        }
+
+        td.ws-customer-count-cell {
+            text-align: center;
+        }
+    }
+}
+
+// Customer count pill
+.ws-customer-count-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #e8f0fe;
+    color: $primary-color;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.ws-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+
+    .ws-empty-icon {
+        font-size: 42px;
+        color: #ccd2e0;
+        margin-bottom: 12px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #aab0bc;
+        font-size: 14.5px;
+        margin: 0;
+    }
+}
+
+// ============================================
+// STATUS BADGE (shared: workshop + attendance)
+// ============================================
+.ws-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+
+    &.ws-active,
+    &.ws-present {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    &.ws-inactive,
+    &.ws-absent {
+        background: #f8d7da;
+        color: #721c24;
+    }
+}
+
+// ============================================
+// ACTION BUTTONS (table row)
+// ============================================
+.ws-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 11px;
+        border: none;
+        border-radius: 6px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .ws-view-btn {
+        background: $info-color;
+        color: $white;
+
+        &:hover:not(:disabled) {
+            background: #138496;
+        }
+    }
+
+    .ws-add-customer-btn {
+        background: $success-color;
+        color: $white;
+
+        &:disabled {
+            background: $muted-color;
+        }
+
+        &:hover:not(:disabled) {
+            background: #219653;
+        }
+    }
+
+    .ws-edit-btn {
+        background: $primary-color;
+        color: $white;
+
+        &:hover:not(:disabled) {
+            background: $primary-dark;
+        }
+    }
+
+    .ws-delete-btn {
+        background: $danger-color;
+        color: $white;
+        width: 30px;
+        padding: 6px;
+        justify-content: center;
+
+        &:hover:not(:disabled) {
+            background: #c82333;
+        }
+    }
+}
+
+// ============================================
+// LOADING
+// ============================================
+.ws-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 40px;
+    text-align: center;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #888;
+        font-size: 15px;
+        margin: 14px 0 0;
+    }
+}
+
+.ws-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid #e8eaf0;
+    border-top: 2.5px solid $primary-color;
+    border-radius: 50%;
+    animation: ws-spin 0.8s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+
+    &.large {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+
+    &.small {
+        width: 16px;
+        height: 16px;
+        border-width: 2px;
+    }
+}
+
+@keyframes ws-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+// ============================================
+// MODAL — SHARED BASE (delete, customer, details)
+// ============================================
+.ws-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 30, 60, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: ws-fadeIn 0.2s ease-out;
+
+    @keyframes ws-fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+}
+
+.ws-modal-content {
+    background: $white;
+    border-radius: $border-radius;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(30, 30, 60, 0.18);
+    animation: ws-slideUp 0.25s ease-out;
+
+    &.ws-modal-md {
+        max-width: 700px;
+    }
+
+    &.ws-modal-lg {
+        max-width: 800px;
+    }
+
+    @keyframes ws-slideUp {
+        from {
+            transform: translateY(16px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+.ws-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid #eaeef6;
+    position: sticky;
+    top: 0;
+    background: $white;
+    z-index: 10;
+    border-radius: $border-radius $border-radius 0 0;
+
+    .ws-modal-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: $primary-dark;
+    }
+
+    .ws-modal-close {
+        background: #f5f6fa;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 14px;
+        cursor: pointer;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+
+        &:hover {
+            background: #ede8fa;
+            color: $primary-color;
+        }
+    }
+}
+
+.ws-modal-body {
+    padding: 22px;
+}
+
+// ── Delete-specific accents ──
+.ws-modal-header.ws-danger .ws-modal-title {
+    color: $danger-color;
+}
+
+.ws-modal-header.ws-danger .ws-modal-close:hover {
+    background: #ffe8e8;
+    color: $danger-color;
+}
+
+.ws-delete-body {
+    padding: 28px 24px;
+    text-align: center;
+
+    .ws-delete-icon {
+        font-size: 42px;
+        color: $danger-color;
+        margin-bottom: 16px;
+    }
+
+    h3 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 10px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #7f8c8d;
+        line-height: 1.6;
+        font-size: 14px;
+        margin: 0 0 20px;
+    }
+}
+
+// Detail summary card (used in delete modal)
+.ws-detail-card {
+    background: #fff8f0;
+    border: 1px solid #f5c88a;
+    border-radius: $border-radius-sm;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    text-align: left;
+
+    .ws-detail-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+
+        svg {
+            color: $warning-color;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        strong {
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #856404;
+        }
+    }
+
+    .ws-detail-card-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #856404;
+        line-height: 1.8;
+
+        strong {
+            font-weight: 700;
+        }
+    }
+}
+
+// ── Summary strip (workshop info inside Customer/Details modal) ──
+.ws-summary-strip {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: #f8f9fc;
+    border-radius: $border-radius-sm;
+
+    .ws-summary-items {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #444;
+
+        strong {
+            font-family: 'Roboto', sans-serif;
+            color: $primary-dark;
+            font-weight: 700;
+        }
+    }
+}
+
+// ── Customer search list ──
+.ws-customer-list {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    border: 1px solid #eee;
+    border-radius: $border-radius-sm;
+
+    .ws-customer-list-empty {
+        padding: 22px;
+        text-align: center;
+        color: #aab0bc;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+    }
+
+    .ws-customer-list-item {
+        padding: 11px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f2f8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.15s;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background: #f7f8fc;
+        }
+
+        &.ws-customer-selected {
+            background: #e3f2fd;
+        }
+
+        .ws-customer-list-name {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: #2d2d50;
+        }
+
+        .ws-customer-list-meta {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .ws-customer-check-icon {
+            color: $success-color;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+    }
+}
+
+// ── Create new customer inline ──
+.ws-create-customer-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: transparent;
+    color: $primary-color;
+    border: 1.5px dashed $primary-color;
+    padding: 10px;
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 16px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: all 0.2s;
+
+    &:hover {
+        background: #ededfb;
+    }
+}
+
+.ws-new-customer-panel {
+    border: 1.5px solid $primary-light;
+    padding: 16px;
+    border-radius: $border-radius-sm;
+    margin-bottom: 16px;
+    background: #fafaff;
+
+    h4 {
+        margin: 0 0 14px;
+        color: $primary-color;
+        font-family: 'Roboto', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .ws-new-customer-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+
+        .ws-new-customer-cancel {
+            background: #f0f2f8;
+            color: #555;
+
+            &:hover {
+                background: #e5e8f0;
+            }
+        }
+
+        .ws-new-customer-save {
+            background: linear-gradient(135deg, $success-color, #2ecc71);
+            color: $white;
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(135deg, #219653, $success-color);
+            }
+        }
+    }
+}
+
+// ── Modal footer actions (generic, used by all 3 modals) ──
+.ws-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+
+    &.ws-modal-actions-center {
+        justify-content: center;
+    }
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .ws-btn-cancel {
+        background: #f0f2f8;
+        color: #555;
+        border: 1.5px solid #dde1ed;
+
+        &:hover {
+            background: #e5e8f0;
+        }
+    }
+
+    .ws-btn-delete {
+        background: $danger-color;
+        color: $white;
+        box-shadow: 0 3px 8px rgba(220, 53, 69, 0.25);
+
+        &:hover:not(:disabled) {
+            background: #c82333;
+            box-shadow: 0 5px 12px rgba(220, 53, 69, 0.35);
+        }
+    }
+
+    .ws-btn-primary {
+        background: linear-gradient(135deg, $primary-color, $primary-light);
+        color: $white;
+        box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, $primary-dark, $primary-color);
+            box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
+        }
+    }
+}
+
+// ── Workshop details modal — customer table ──
+.ws-details-section-title {
+    margin: 0 0 14px;
+    color: $primary-color;
+    font-family: 'Roboto', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.ws-details-table-wrap {
+    overflow-x: auto;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+
+        thead tr {
+            background: #f5f6fa;
+        }
+
+        th {
+            padding: 11px 14px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b6b9a;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        td {
+            padding: 11px 14px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13.5px;
+            color: #3a3a5c;
+            border-bottom: 1px solid #f0f2f8;
+            vertical-align: middle;
+
+            &.ws-details-name-cell {
+                font-weight: 600;
+            }
+
+            &.ws-details-package-cell {
+                min-width: 220px;
+
+                strong {
+                    color: $primary-color;
+                }
+            }
+
+            &.ws-details-attendance-cell {
+                text-align: center;
+            }
+
+            &.ws-details-action-cell {
+                text-align: center;
+                white-space: nowrap;
+            }
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+    }
+}
+
+// ── Package display (read mode) inside details table ──
+.ws-package-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13.5px;
+    color: #3a3a5c;
+
+    strong {
+        font-family: 'Roboto', sans-serif;
+        color: $primary-color;
+        font-weight: 700;
+    }
+}
+
+.ws-edit-package-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1.5px solid $primary-light;
+    color: $primary-color;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        background: $primary-color;
+        border-color: $primary-color;
+        color: $white;
+    }
+}
+
+// ── Package edit mode (select + save/cancel) inside details table ──
+.ws-edit-package-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ws-edit-package-select {
+    flex: 1;
+    min-width: 160px;
+    padding: 7px 32px 7px 11px;
+    border: 1.5px solid $primary-light;
+    border-radius: $border-radius-sm;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #333;
+    background-color: $white;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236a6ac5'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 13px;
+    transition: border 0.2s, box-shadow 0.2s;
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.15);
+    }
+}
+
+.ws-edit-package-save {
+    background: $success-color;
+    color: $white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: $border-radius-sm;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+        background: #219653;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.ws-edit-package-cancel {
+    background: #f0f2f8;
+    color: #555;
+    border: 1.5px solid #dde1ed;
+    padding: 7px 14px;
+    border-radius: $border-radius-sm;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #e5e8f0;
+    }
+}
+
+// ── Attendance toggle (wraps the badge in a button) ──
+.ws-attendance-toggle-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.15s;
+
+    .ws-status-badge {
+        cursor: pointer;
+    }
+
+    &:hover {
+        transform: scale(1.06);
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+}
+
+// ── Remove customer (details table) ──
+.ws-remove-customer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(220, 53, 69, 0.08);
+    color: $danger-color;
+    border: 1.5px solid rgba(220, 53, 69, 0.25);
+    padding: 6px 13px;
+    border-radius: $border-radius-sm;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: $danger-color;
+        border-color: $danger-color;
+        color: $white;
+        transform: translateY(-1px);
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media screen and (max-width: 768px) {
+    .ws-main {
+        padding: 16px 14px 32px;
+    }
+
+    .ws-page-header {
+        padding: 14px 16px;
+
+        h2 {
+            font-size: 18px;
+        }
+
+        .ws-right-section {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .ws-search-container {
+            width: 100%;
+        }
+
+        .ws-action-buttons-group {
+            width: 100%;
+
+            button {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    }
+
+    .ws-data-table table {
+
+        th,
+        td {
+            padding: 11px 12px;
+            font-size: 13px;
+        }
+    }
+
+    .ws-form-container {
+        padding: 18px;
+
+        .ws-form-actions {
+            flex-direction: column;
+
+            button {
+                justify-content: center;
+            }
+        }
+    }
+
+    .ws-form-container .ws-form-row,
+    .ws-modal-body .ws-form-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .ws-modal-content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .ws-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .ws-row-actions {
+        gap: 6px;
+    }
+
+    .ws-summary-strip .ws-summary-items {
+        gap: 12px;
+        flex-direction: column;
+    }
+
+    .ws-modal-actions {
+        flex-direction: column;
+
+        button {
+            justify-content: center;
+        }
+    }
+
+    .ws-package-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .ws-edit-package-container {
+        flex-direction: column;
+        align-items: stretch;
+
+        .ws-edit-package-select {
+            min-width: 100%;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .ws-modal-header {
+        padding: 14px 16px;
+    }
+
+    .ws-modal-body {
+        padding: 16px;
+    }
+
+    .ws-delete-body {
+        padding: 20px 16px;
+    }
+}
+
+
+// ── Remove customer confirmation — slightly different accent on the card ──
+.ws-detail-card-danger {
+    background: #fdf0f0;
+    border-color: rgba(220, 53, 69, 0.35);
+
+    .ws-detail-card-header svg {
+        color: $danger-color;
+    }
+
+    .ws-detail-card-header strong {
+        color: #842029;
+    }
+
+    .ws-detail-card-info {
+        color: #842029;
+    }
+}
+
+.ws-modal-overlay-nested {
+    z-index: 1100;
+}
+
+
+// ============================================
+// FILTERS BAR
+// ============================================
+.ws-filters-bar {
+    max-width: 1200px;
+    margin: 0 auto 18px;
+    padding: 12px 20px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .ws-filters-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .ws-filter-btn {
+        padding: 6px 16px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: 50px;
+        background: transparent;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #888;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            border-color: $primary-light;
+            color: $primary-color;
+            background: #f5f6fb;
+        }
+
+        &.ws-filter-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            border-color: $primary-color;
+            color: $white;
+            box-shadow: 0 2px 8px rgba(63, 63, 145, 0.25);
+        }
+
+        &.ws-filter-custom {
+            border-style: dashed;
+        }
+    }
+
+    .ws-filter-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
+
+        strong {
+            color: $primary-color;
+            font-family: 'Roboto', sans-serif;
+        }
+    }
+}
+
+// ============================================
+// CUSTOM DATE RANGE
+// ============================================
+.ws-custom-date-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    background: #f8f9fc;
+    border-radius: $border-radius-sm;
+    border: 1.5px solid #e3e8f0;
+
+    .ws-custom-date-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        label {
+            font-family: 'Roboto', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type='date'] {
+            padding: 6px 10px;
+            border: 1.5px solid #e3e8f0;
+            border-radius: $border-radius-sm;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13px;
+            color: #333;
+            background: $white;
+            transition: border 0.25s;
+
+            &:focus {
+                border-color: $primary-light;
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+            }
+        }
+    }
+
+    .ws-custom-date-apply {
+        padding: 6px 18px;
+        border: none;
+        border-radius: 50px;
+        background: linear-gradient(135deg, $success-color, #2ecc71);
+        color: $white;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #219653, $success-color);
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .ws-custom-date-clear {
+        padding: 6px 14px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: 50px;
+        background: transparent;
+        color: #888;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #f0f2f8;
+            border-color: #c8cde0;
+        }
+    }
+}
+
+// ============================================
+// PAGINATION
+// ============================================
+.ws-pagination {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    padding: 16px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    .ws-pagination-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #555;
+        font-weight: 500;
+    }
+
+    .ws-pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .ws-pagination-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        background: $white;
+        color: #555;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 13px;
+
+        &:hover:not(:disabled) {
+            border-color: $primary-color;
+            background: #f5f6fb;
+            color: $primary-color;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+
+    .ws-pagination-pages {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .ws-pagination-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+        border: 1.5px solid transparent;
+        border-radius: $border-radius-sm;
+        background: transparent;
+        color: #555;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 600;
+
+        &:hover:not(.ws-pagination-active) {
+            background: #f5f6fb;
+            border-color: #e3e8f0;
+        }
+
+        &.ws-pagination-active {
+            background: $primary-color;
+            color: $white;
+            border-color: $primary-color;
+            box-shadow: 0 2px 8px rgba(63, 63, 145, 0.25);
+        }
+    }
+}
+
+// ============================================
+// RESPONSIVE PAGINATION & FILTERS
+// ============================================
+@media screen and (max-width: 768px) {
+    .ws-filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 16px;
+
+        .ws-filters-group {
+            justify-content: center;
+        }
+
+        .ws-filter-info {
+            text-align: center;
+        }
+    }
+
+    .ws-custom-date-container {
+        flex-direction: column;
+        align-items: stretch;
+
+        .ws-custom-date-field {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .ws-custom-date-apply,
+        .ws-custom-date-clear {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .ws-pagination {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+
+        .ws-pagination-info {
+            text-align: center;
+        }
+
+        .ws-pagination-controls {
+            justify-content: center;
+        }
+
+        .ws-pagination-pages {
+            gap: 3px;
+        }
+
+        .ws-pagination-page {
+            min-width: 32px;
+            height: 32px;
+            font-size: 12px;
+            padding: 0 8px;
+        }
+
+        .ws-pagination-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .ws-filters-bar {
+        .ws-filters-group {
+            gap: 4px;
+        }
+
+        .ws-filter-btn {
+            font-size: 11px;
+            padding: 4px 12px;
+        }
+    }
+
+    .ws-pagination {
+        padding: 12px 16px;
+
+        .ws-pagination-pages {
+            gap: 2px;
+        }
+
+        .ws-pagination-page {
+            min-width: 28px;
+            height: 28px;
+            font-size: 11px;
+            padding: 0 6px;
+        }
+
+        .ws-pagination-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+        }
+    }
+}
+
+
+// ============================================
+// WORKSHOPS - EXPORT BUTTON ONLY
+// ============================================
+// Add this to your Workshops.scss file
+
+// ── Export Button ──
+.ws-export-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    color: $white !important;
+    padding: 9px 20px !important;
+    border: none !important;
+    border-radius: 50px !important;
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.22s ease !important;
+    box-shadow: 0 3px 8px rgba(39, 174, 96, 0.25) !important;
+    letter-spacing: 0.2px !important;
+    white-space: nowrap !important;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 14px rgba(39, 174, 96, 0.35) !important;
+        background: linear-gradient(135deg, #219653, #27ae60) !important;
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0) !important;
+    }
+
+    &:disabled {
+        opacity: 0.55 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    svg {
+        font-size: 14px !important;
+    }
+}
+
+// ── Responsive for Export Button ──
+@media screen and (max-width: 768px) {
+    .ws-export-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+    }
+
+    .ws-action-buttons-group {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+
+        button {
+            flex: 1 !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            padding: 8px 12px !important;
+            min-width: calc(50% - 4px) !important;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .ws-export-btn {
+        font-size: 11px !important;
+        padding: 8px 12px !important;
+    }
+
+    .ws-action-buttons-group {
+        gap: 6px !important;
+
+        button {
+            font-size: 11px !important;
+            padding: 7px 10px !important;
+            gap: 4px !important;
+            min-width: calc(50% - 3px) !important;
+
+            svg {
+                font-size: 11px !important;
+            }
+        }
+    }
+}
+
+// ── Fix for very small screens ──
+@media (max-width: 400px) {
+    .ws-action-buttons-group {
+        button {
+            font-size: 10px !important;
+            padding: 6px 8px !important;
+            min-width: 100% !important;
+        }
+    }
+}

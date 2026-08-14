@@ -1,0 +1,2063 @@
+// ============================================
+// GOOGLE FONTS IMPORT
+// ============================================
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+// ============================================
+// VARIABLES
+// ============================================
+$primary-color: #3f3f91;
+$primary-light: #6a6ac5;
+$primary-dark: #2d2f87;
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #e67e22;
+$muted-color: #95a5a6;
+$bg-color: #dfeafb;
+$white: #ffffff;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+$border-radius: 14px;
+$border-radius-sm: 8px;
+
+// ============================================
+// MAIN
+// ============================================
+.bi-main {
+    background: $bg-color !important;
+    font-family: 'Open Sans', sans-serif !important;
+    min-height: 100vh;
+    padding: 24px 28px 40px;
+}
+
+// ============================================
+// PAGE HEADER
+// ============================================
+.bi-page-header {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    padding: 18px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    h2 {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 22px;
+        font-weight: 700;
+        color: $primary-dark;
+        margin: 0;
+    }
+
+    .bi-right-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .bi-search-container {
+        position: relative;
+        width: 240px;
+
+        input {
+            width: 100%;
+            padding: 9px 14px 9px 38px;
+            border: 1.5px solid #e3e8f0;
+            border-radius: 50px;
+            background: #f5f7fa;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.25s;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-light;
+                background: $white;
+                box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+            }
+
+            &::placeholder {
+                color: #aab0bc;
+            }
+        }
+
+        .bi-search-icon {
+            position: absolute;
+            top: 50%;
+            left: 13px;
+            transform: translateY(-50%);
+            color: #aab0bc;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    }
+
+    .bi-action-buttons-group {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-wrap: wrap;
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: $white;
+            padding: 9px 16px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 12.5px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            border-radius: 50px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.13);
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+            }
+
+            &:active {
+                transform: translateY(0);
+            }
+        }
+
+        .bi-alert-btn {
+            position: relative;
+            background: $muted-color;
+            padding: 9px 14px;
+
+            &:hover {
+                background: #7f8c8d;
+            }
+
+            .bi-alert-badge {
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                background: $danger-color;
+                color: $white;
+                font-size: 10px;
+                font-weight: 700;
+                min-width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 4px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        .bi-add-ml-btn {
+            background: linear-gradient(135deg, #5a3ec8, #8b7ad6);
+
+            &:hover {
+                background: linear-gradient(135deg, #4a32a8, #5a3ec8);
+                box-shadow: 0 5px 14px rgba(90, 62, 200, 0.35);
+            }
+        }
+
+        .bi-add-item-btn {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+
+            &:hover {
+                background: linear-gradient(135deg, $primary-dark, $primary-color);
+                box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
+            }
+        }
+
+        .bi-upload-btn {
+            background: linear-gradient(135deg, #17a2b8, #20c4dc);
+
+            &:hover {
+                background: linear-gradient(135deg, #138496, #17a2b8);
+                box-shadow: 0 5px 14px rgba(23, 162, 184, 0.35);
+            }
+        }
+
+        .bi-add-stock-btn {
+            background: linear-gradient(135deg, $warning-color, #f39c12);
+
+            &:hover {
+                background: linear-gradient(135deg, #d35400, $warning-color);
+                box-shadow: 0 5px 14px rgba(230, 126, 34, 0.35);
+            }
+        }
+    }
+}
+
+// ============================================
+// FILTERS BAR
+// ============================================
+.bi-filters {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    padding: 14px 20px;
+    background: $white;
+    border-radius: $border-radius-sm;
+    box-shadow: $shadow;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+
+    .bi-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        label {
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        select {
+            padding: 7px 12px;
+            border: 1.5px solid #e3e8f0;
+            border-radius: 50px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13.5px;
+            color: #333;
+            background: #fafbfc;
+            cursor: pointer;
+            min-width: 160px;
+            transition: border 0.25s, box-shadow 0.25s;
+
+            &:focus {
+                border-color: $primary-light;
+                outline: none;
+                background: $white;
+                box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+            }
+        }
+    }
+}
+
+// ============================================
+// DATA TABLE
+// ============================================
+.bi-data-table {
+    max-width: 1200px;
+    margin: 0 auto 18px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+
+        thead {
+            background: #f7f8fc;
+            border-bottom: 1.5px solid #eaeef6;
+        }
+
+        th {
+            padding: 14px 20px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b6b9a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 13px 20px;
+            text-align: left;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #3a3a5c;
+            border-bottom: 1px solid #f0f2f8;
+        }
+
+        td.bi-ml-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: $primary-color;
+        }
+
+        td.bi-item-cell {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+
+            .bi-item-icon {
+                color: $primary-light;
+                font-size: 15px;
+                display: inline-flex;
+            }
+        }
+
+        td.bi-qty-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: #2d2d50;
+        }
+
+        td.bi-min-cell {
+            color: #888;
+        }
+    }
+}
+
+// ── Clickable row (expand toggle) ──
+.bi-product-row {
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover td {
+        background-color: #f5f6fb;
+    }
+
+    &.bi-row-expanded td {
+        background-color: #f0f0fb;
+        border-bottom-color: transparent;
+    }
+}
+
+.bi-expand-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: #aab0bc;
+    transition: transform 0.25s ease, color 0.2s;
+    margin-right: 6px;
+    flex-shrink: 0;
+
+    &.bi-chevron-open {
+        transform: rotate(90deg);
+        color: $primary-color;
+    }
+}
+
+.bi-ml-cell-content {
+    display: flex;
+    align-items: center;
+}
+
+// ── Expanded transaction panel row ──
+.bi-transaction-row {
+    td {
+        padding: 0;
+        border-bottom: 1px solid #f0f2f8;
+    }
+}
+
+.bi-transaction-panel {
+    background: #fafaff;
+    padding: 18px 24px 20px 50px;
+    animation: bi-expandIn 0.2s ease-out;
+
+    @keyframes bi-expandIn {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+.bi-transaction-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    h5 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: $primary-dark;
+    }
+}
+
+.bi-transaction-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #888;
+}
+
+.bi-transaction-empty {
+    padding: 16px 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #aab0bc;
+    text-align: center;
+}
+
+// ============================================
+// TRANSACTION LIST - SINGLE ROW
+// ============================================
+.bi-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.bi-transaction-item {
+    background: $white;
+    border: 1px solid #eceef6;
+    border-radius: $border-radius-sm;
+    padding: 8px 16px;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: $primary-light;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .bi-transaction-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
+
+        .bi-txn-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $primary-light;
+            }
+        }
+
+        .bi-txn-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.bi-txn-qty {
+                color: $success-color;
+                font-weight: 700;
+            }
+
+            &.bi-txn-stock {
+                color: #555;
+                font-weight: 500;
+
+                strong {
+                    color: $primary-color;
+                    font-weight: 700;
+                }
+            }
+        }
+
+        .bi-txn-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
+        }
+    }
+}
+
+// ============================================
+// VIEW DISPOSAL BUTTON
+// ============================================
+.bi-view-disposal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: $white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 12px;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    svg {
+        font-size: 11px;
+    }
+}
+
+// ============================================
+// DISPOSAL PANEL
+// ============================================
+.bi-disposal-panel {
+    background: #fafaff;
+    padding: 14px 24px 18px;
+    border-top: 2px solid #f8d7da;
+    animation: bi-expandIn 0.2s ease-out;
+
+    .bi-disposal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+
+        h5 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #721c24;
+
+            svg {
+                color: $danger-color;
+            }
+        }
+
+        .bi-disposal-close-btn {
+            background: #f5f6fa;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-size: 11px;
+            cursor: pointer;
+            color: #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+
+            &:hover {
+                background: #ffe8e8;
+                color: $danger-color;
+            }
+        }
+    }
+
+    .bi-disposal-loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
+    }
+
+    .bi-disposal-empty {
+        padding: 12px 0;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #aab0bc;
+        text-align: center;
+    }
+
+    .bi-disposal-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+}
+
+// ============================================
+// DISPOSAL ITEM - SINGLE ROW
+// ============================================
+.bi-disposal-item {
+    background: #fff8f8;
+    border: 1px solid #f5d0d0;
+    border-radius: $border-radius-sm;
+    padding: 8px 16px;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: $danger-color;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.08);
+    }
+
+    .bi-disposal-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+        padding: 0;
+
+        .bi-disposal-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            white-space: nowrap;
+
+            svg {
+                font-size: 10px;
+                color: $danger-color;
+            }
+        }
+
+        .bi-disposal-value {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 12.5px;
+            color: #3a3a5c;
+            white-space: nowrap;
+
+            &.bi-disposal-reason {
+                background: #fff3cd;
+                color: #856404;
+                padding: 1px 10px;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 11px;
+            }
+
+            &.bi-disposal-qty {
+                color: $danger-color;
+                font-weight: 700;
+            }
+        }
+
+        .bi-disposal-separator {
+            color: #dde1ed;
+            font-weight: 300;
+            font-size: 13px;
+        }
+    }
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.bi-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+
+    .bi-empty-icon {
+        font-size: 42px;
+        color: #ccd2e0;
+        margin-bottom: 12px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #aab0bc;
+        font-size: 14.5px;
+        margin: 0;
+    }
+}
+
+// ============================================
+// STOCK STATUS BADGE
+// ============================================
+.bi-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 13px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+
+    .bi-status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    &.bi-status-healthy {
+        background: #d4edda;
+        color: #155724;
+
+        .bi-status-dot {
+            background: $success-color;
+        }
+    }
+
+    &.bi-status-low {
+        background: #fff3cd;
+        color: #856404;
+
+        .bi-status-dot {
+            background: $warning-color;
+        }
+    }
+
+    &.bi-status-empty {
+        background: #f8d7da;
+        color: #721c24;
+
+        .bi-status-dot {
+            background: $danger-color;
+        }
+    }
+}
+
+// ============================================
+// LOADING
+// ============================================
+.bi-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 40px;
+    text-align: center;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #888;
+        font-size: 15px;
+        margin: 14px 0 0;
+    }
+}
+
+.bi-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid #e8eaf0;
+    border-top: 2.5px solid $primary-color;
+    border-radius: 50%;
+    animation: bi-spin 0.8s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+
+    &.large {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+
+    &.small {
+        width: 16px;
+        height: 16px;
+        border-width: 2px;
+    }
+
+    &.tiny {
+        width: 14px;
+        height: 14px;
+        border-width: 2px;
+    }
+}
+
+@keyframes bi-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+// ============================================
+// PAGINATION
+// ============================================
+.bi-pagination {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 14px 22px;
+    background: $white;
+    border-radius: $border-radius-sm;
+    box-shadow: $shadow;
+
+    .bi-pagination-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #888;
+    }
+
+    .bi-pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .bi-pagination-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: 50%;
+        background: $white;
+        color: $primary-color;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            background: $primary-color;
+            color: $white;
+            border-color: $primary-color;
+        }
+
+        &:disabled {
+            color: #ccd2e0;
+            cursor: not-allowed;
+            border-color: #f0f2f8;
+        }
+    }
+
+    .bi-pagination-pages {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0 4px;
+    }
+
+    .bi-pagination-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: #555;
+        cursor: pointer;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #f0f2f8;
+        }
+
+        &.bi-pagination-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            color: $white;
+            box-shadow: 0 2px 6px rgba(63, 63, 145, 0.3);
+        }
+    }
+}
+
+// ============================================
+// MODAL — SHARED BASE
+// ============================================
+.bi-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 30, 60, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: bi-fadeIn 0.2s ease-out;
+
+    @keyframes bi-fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+}
+
+.bi-modal-content {
+    background: $white;
+    border-radius: $border-radius;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(30, 30, 60, 0.18);
+    animation: bi-slideUp 0.25s ease-out;
+
+    &.bi-modal-lg {
+        max-width: 760px;
+    }
+
+    @keyframes bi-slideUp {
+        from {
+            transform: translateY(16px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+.bi-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid #eaeef6;
+    position: sticky;
+    top: 0;
+    background: $white;
+    z-index: 10;
+    border-radius: $border-radius $border-radius 0 0;
+
+    .bi-modal-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: $primary-dark;
+    }
+
+    .bi-modal-close {
+        background: #f5f6fa;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 14px;
+        cursor: pointer;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+
+        &:hover {
+            background: #ede8fa;
+            color: $primary-color;
+        }
+    }
+}
+
+.bi-modal-body {
+    padding: 22px;
+}
+
+.bi-modal-footer {
+    padding: 16px 22px;
+    border-top: 1px solid #eaeef6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    background: $white;
+    z-index: 10;
+    border-radius: 0 0 $border-radius $border-radius;
+}
+
+.bi-btn-cancel,
+.bi-btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+.bi-btn-cancel {
+    background: #f0f2f8;
+    color: #555;
+    border: 1.5px solid #dde1ed;
+
+    &:hover {
+        background: #e5e8f0;
+    }
+}
+
+.bi-btn-primary {
+    background: linear-gradient(135deg, $primary-color, $primary-light);
+    color: $white;
+    box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, $primary-dark, $primary-color);
+        box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
+        transform: translateY(-1px);
+    }
+}
+
+// ── Modal form fields ──
+.bi-form-row {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 16px;
+
+    .bi-form-field {
+        flex: 1;
+    }
+}
+
+.bi-form-field {
+    label {
+        display: block;
+        margin-bottom: 7px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 500;
+        font-size: 13.5px;
+        color: #555;
+    }
+
+    input[type='text'],
+    input[type='number'] {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background: #fafbfc;
+        box-sizing: border-box;
+        transition: border 0.25s, box-shadow 0.25s;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &::placeholder {
+            color: #bfc5ce;
+        }
+    }
+
+    select {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background: #fafbfc;
+        box-sizing: border-box;
+        cursor: pointer;
+        transition: border 0.25s, box-shadow 0.25s;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+    }
+
+    .bi-field-hint {
+        display: block;
+        color: #aab0bc;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+}
+
+// ── Bulk upload area ──
+.bi-upload-area {
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #555;
+        font-size: 14px;
+        margin: 0 0 6px;
+
+        &.bi-upload-hint {
+            font-size: 12.5px;
+            color: #aab0bc;
+        }
+    }
+}
+
+.bi-file-drop {
+    border: 2px dashed #c5cbdf;
+    border-radius: $border-radius-sm;
+    padding: 20px;
+    text-align: center;
+    margin-top: 14px;
+    background: #fafbfc;
+
+    input[type='file'] {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+        color: #555;
+        width: 100%;
+    }
+}
+
+.bi-file-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: #f0fff5;
+    border: 1px solid #d0e8d8;
+    border-radius: $border-radius-sm;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13.5px;
+    color: #2d2d50;
+
+    svg {
+        color: $success-color;
+    }
+}
+
+.bi-btn-download {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    background: transparent;
+    color: $primary-color;
+    border: 1.5px solid $primary-color;
+    padding: 9px 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+
+    &:hover {
+        background: #ededfb;
+    }
+}
+
+// ── Error/Results modal ──
+.bi-upload-summary {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+
+    div {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 12px 16px;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13.5px;
+
+        strong {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+        }
+
+        svg {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+    }
+}
+
+.bi-summary-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.bi-summary-error {
+    &.has-errors {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    &.no-errors {
+        background: #f0f2f8;
+        color: #888;
+    }
+}
+
+.bi-result-section {
+    margin-bottom: 22px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.bi-result-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 12px;
+
+    &.bi-result-success {
+        color: $success-color;
+    }
+
+    &.bi-result-error {
+        color: $danger-color;
+    }
+}
+
+.bi-result-table-wrap {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid #f0f2f8;
+    border-radius: $border-radius-sm;
+}
+
+.bi-result-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    thead {
+        background: #f7f8fc;
+        position: sticky;
+        top: 0;
+    }
+
+    th {
+        padding: 10px 14px;
+        text-align: left;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b6b9a;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    td {
+        padding: 9px 14px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #3a3a5c;
+        border-bottom: 1px solid #f0f2f8;
+
+        &.bi-success-cell {
+            color: $success-color;
+            font-weight: 600;
+        }
+
+        &.bi-error-cell {
+            color: $danger-color;
+        }
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+}
+
+.bi-btn-download-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    background: $danger-color;
+    color: $white;
+    padding: 9px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 3px 8px rgba(220, 53, 69, 0.25);
+
+    &:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+    }
+}
+
+// ── Alert modal ──
+.bi-alert-empty-state {
+    text-align: center;
+    padding: 30px;
+
+    svg {
+        font-size: 40px;
+        color: $success-color;
+    }
+
+    p {
+        margin-top: 12px;
+        color: #555;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+    }
+}
+
+.bi-alert-section {
+    margin-bottom: 18px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    h4 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 10px;
+
+        &.bi-alert-heading-empty {
+            color: $danger-color;
+        }
+
+        &.bi-alert-heading-low {
+            color: $warning-color;
+        }
+    }
+}
+
+.bi-alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bi-alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: $border-radius-sm;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13.5px;
+
+    span:first-child {
+        font-weight: 600;
+    }
+
+    &.bi-alert-empty {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    &.bi-alert-low {
+        background: #fff3cd;
+        color: #856404;
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media screen and (max-width: 768px) {
+    .bi-main {
+        padding: 16px 14px 32px;
+    }
+
+    .bi-page-header {
+        padding: 14px 16px;
+
+        h2 {
+            font-size: 18px;
+        }
+
+        .bi-right-section {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .bi-search-container {
+            width: 100%;
+        }
+
+        .bi-action-buttons-group {
+            width: 100%;
+
+            button {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    }
+
+    .bi-filters {
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px;
+
+        .bi-filter-group {
+            width: 100%;
+
+            select {
+                flex: 1;
+            }
+        }
+    }
+
+    .bi-data-table table {
+
+        th,
+        td {
+            padding: 11px 12px;
+            font-size: 13px;
+        }
+    }
+
+    .bi-transaction-panel {
+        padding: 16px;
+    }
+
+    .bi-pagination {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .bi-form-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .bi-modal-content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .bi-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .bi-upload-summary {
+        flex-direction: column;
+    }
+
+    .bi-transaction-item .bi-transaction-row,
+    .bi-disposal-item .bi-disposal-row {
+        gap: 2px 8px;
+
+        .bi-txn-label,
+        .bi-disposal-label {
+            font-size: 10px;
+        }
+
+        .bi-txn-value,
+        .bi-disposal-value {
+            font-size: 11.5px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .bi-modal-header {
+        padding: 14px 16px;
+    }
+
+    .bi-modal-body {
+        padding: 16px;
+    }
+
+    .bi-modal-footer {
+        padding: 12px 16px;
+    }
+
+    .bi-pagination {
+        padding: 12px 16px;
+
+        .bi-pagination-pages {
+            gap: 2px;
+        }
+
+        .bi-pagination-page {
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+        }
+
+        .bi-pagination-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 11px;
+        }
+    }
+
+    .bi-transaction-item .bi-transaction-row,
+    .bi-disposal-item .bi-disposal-row {
+        gap: 2px 6px;
+
+        .bi-txn-label,
+        .bi-disposal-label {
+            font-size: 9px;
+        }
+
+        .bi-txn-value,
+        .bi-disposal-value {
+            font-size: 10.5px;
+        }
+
+        .bi-txn-separator,
+        .bi-disposal-separator {
+            font-size: 10px;
+        }
+    }
+}
+
+
+// ============================================
+// VIEW ALL TRANSACTIONS BUTTON
+// ============================================
+.bi-transaction-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bi-view-all-transactions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, $primary-color, $primary-light);
+    color: $white;
+    border: none;
+    border-radius: 50px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(63, 63, 145, 0.3);
+        background: linear-gradient(135deg, $primary-dark, $primary-color);
+    }
+
+    svg {
+        font-size: 11px;
+    }
+}
+
+// ============================================
+// FULL TRANSACTION MODAL
+// ============================================
+.bi-modal-content.bi-modal-lg {
+    max-width: 820px;
+}
+
+// ── Transaction tabs ──
+.bi-transaction-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #f0f2f8;
+    padding-bottom: 10px;
+
+    .bi-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #888;
+        background: #f5f6fa;
+        cursor: pointer;
+        transition: all 0.25s;
+
+        &:hover {
+            background: #e8eaf0;
+            color: #555;
+        }
+
+        &.bi-tab-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            color: $white;
+            box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+            &:hover {
+                box-shadow: 0 4px 14px rgba(63, 63, 145, 0.35);
+            }
+        }
+    }
+}
+
+// ── Full transaction list ──
+.bi-full-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.bi-full-txn-item {
+    background: $white;
+    border: 1px solid #eceef6;
+    border-radius: $border-radius-sm;
+    padding: 12px 16px;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+
+    &.bi-txn-in {
+        border-left-color: $success-color;
+        background: #f8fff9;
+    }
+
+    &.bi-txn-out {
+        border-left-color: $danger-color;
+        background: #fff8f8;
+    }
+
+    &:hover {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+}
+
+.bi-full-txn-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f2f8;
+    margin-bottom: 8px;
+
+    .bi-full-txn-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+
+        .bi-txn-in-icon {
+            color: $success-color;
+        }
+
+        .bi-txn-out-icon {
+            color: $danger-color;
+        }
+
+        &.bi-txn-in {
+            color: $success-color;
+        }
+
+        &.bi-txn-out {
+            color: $danger-color;
+        }
+    }
+
+    .bi-full-txn-reason {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 12px;
+        background: #f0f2f8;
+        border-radius: 20px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .bi-full-txn-date,
+    .bi-full-txn-time {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        color: #888;
+
+        svg {
+            font-size: 11px;
+        }
+    }
+}
+
+.bi-full-txn-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .bi-full-txn-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        flex-wrap: wrap;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+
+        .bi-full-txn-label {
+            font-weight: 600;
+            color: #888;
+            min-width: 100px;
+        }
+
+        .bi-full-txn-value {
+            color: #3a3a5c;
+
+            strong {
+                color: $primary-color;
+                font-weight: 700;
+            }
+        }
+
+        .bi-txn-bulk-id {
+            background: #e8f4fd;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #0c6b9e;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .bi-txn-invoice-tag {
+            background: #fff3cd;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: #856404;
+            font-weight: 600;
+        }
+    }
+}
+
+.bi-transaction-empty {
+    padding: 24px 0;
+    text-align: center;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    color: #aab0bc;
+}
+
+.bi-transaction-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+
+    p {
+        margin-top: 12px;
+        font-family: 'Open Sans', sans-serif;
+        color: #888;
+        font-size: 14px;
+    }
+
+    .bi-loading-spinner.large {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+}
+
+// ── Responsive for Full Transaction Modal ──
+@media screen and (max-width: 768px) {
+    .bi-modal-content.bi-modal-lg {
+        max-width: 100%;
+    }
+
+    .bi-full-txn-header {
+        gap: 8px;
+
+        .bi-full-txn-type {
+            font-size: 13px;
+        }
+
+        .bi-full-txn-reason {
+            font-size: 11px;
+            padding: 2px 10px;
+        }
+
+        .bi-full-txn-date,
+        .bi-full-txn-time {
+            font-size: 11px;
+        }
+    }
+
+    .bi-full-txn-details .bi-full-txn-row {
+        font-size: 12px;
+
+        .bi-full-txn-label {
+            min-width: 80px;
+        }
+    }
+
+    .bi-transaction-tabs {
+        .bi-tab-btn {
+            font-size: 12px;
+            padding: 6px 14px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .bi-full-txn-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .bi-full-txn-details .bi-full-txn-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+
+        .bi-full-txn-label {
+            min-width: auto;
+        }
+    }
+
+    .bi-transaction-tabs {
+        .bi-tab-btn {
+            font-size: 11px;
+            padding: 5px 12px;
+        }
+    }
+}
+
+// ============================================
+// BOTTLE INVENTORY - ADDITIONAL STYLES
+// (Status Filter & Export Button)
+// ============================================
+// Add this to your BottleInventory.scss file
+
+// ── Status Filter ──
+.bi-status-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f7fa;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 50px;
+    padding: 3px 8px 3px 14px;
+    transition: all 0.25s;
+
+    &:focus-within {
+        border-color: $primary-light;
+        background: $white;
+        box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+    }
+
+    .bi-filter-icon {
+        color: #aab0bc;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    .bi-status-select {
+        background: transparent;
+        border: none;
+        padding: 6px 8px 6px 4px;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+        cursor: pointer;
+        outline: none;
+        min-width: 120px;
+        appearance: none;
+
+        option {
+            padding: 6px 10px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13px;
+        }
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    // Add a dropdown arrow indicator
+    &::after {
+        content: '▾';
+        color: #aab0bc;
+        font-size: 10px;
+        margin-right: 4px;
+        pointer-events: none;
+    }
+}
+
+// ── Export Button ──
+.bi-export-btn {
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    box-shadow: 0 3px 8px rgba(39, 174, 96, 0.25) !important;
+
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #219653, #27ae60) !important;
+        box-shadow: 0 5px 14px rgba(39, 174, 96, 0.35) !important;
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    svg {
+        font-size: 13px;
+    }
+}
+
+// ── Responsive for Status Filter ──
+@media screen and (max-width: 768px) {
+    .bi-status-filter {
+        width: 100%;
+        padding: 3px 8px 3px 14px;
+
+        .bi-status-select {
+            width: 100%;
+            min-width: auto;
+            font-size: 13px;
+            padding: 6px 4px;
+        }
+    }
+
+    .bi-export-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .bi-action-buttons-group {
+        flex-wrap: wrap;
+        gap: 8px;
+
+        button {
+            flex: 1;
+            justify-content: center;
+            font-size: 12px;
+            padding: 8px 12px;
+            min-width: calc(50% - 4px);
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .bi-status-filter {
+        padding: 2px 6px 2px 12px;
+
+        .bi-status-select {
+            font-size: 12px;
+            padding: 4px 4px 4px 2px;
+            min-width: 100px;
+        }
+
+        .bi-filter-icon {
+            font-size: 11px;
+        }
+    }
+
+    .bi-export-btn {
+        font-size: 11px;
+        padding: 8px 12px;
+    }
+
+    .bi-action-buttons-group {
+        gap: 6px;
+
+        button {
+            font-size: 11px;
+            padding: 7px 10px;
+            gap: 4px;
+            min-width: calc(50% - 3px);
+
+            svg {
+                font-size: 11px;
+            }
+        }
+    }
+}
+
+// ── Fix for very small screens ──
+@media (max-width: 400px) {
+    .bi-action-buttons-group {
+        button {
+            font-size: 10px;
+            padding: 6px 8px;
+            min-width: 100%;
+        }
+    }
+
+    .bi-status-filter {
+        .bi-status-select {
+            font-size: 11px;
+            padding: 4px 2px;
+            min-width: 80px;
+        }
+    }
+}

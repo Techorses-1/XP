@@ -1,0 +1,82 @@
+// ============================================
+// PROTECTED ROUTE - LOADING STYLES
+// ============================================
+
+.pr-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #dfeafb;
+    font-family: 'Open Sans', sans-serif !important;
+    gap: 16px;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 15px;
+        color: #888;
+        margin: 0;
+        animation: pr-pulse 1.5s ease-in-out infinite;
+    }
+}
+
+.pr-loading-spinner {
+    width: 44px;
+    height: 44px;
+    border: 3.5px solid #e8eaf0;
+    border-top: 3.5px solid #3f3f91;
+    border-radius: 50%;
+    animation: pr-spin 0.8s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+@keyframes pr-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pr-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+// ── Responsive ──
+@media screen and (max-width: 768px) {
+    .pr-loading-container {
+        padding: 20px;
+
+        p {
+            font-size: 14px;
+        }
+    }
+
+    .pr-loading-spinner {
+        width: 36px;
+        height: 36px;
+        border-width: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pr-loading-container {
+        p {
+            font-size: 13px;
+        }
+    }
+
+    .pr-loading-spinner {
+        width: 30px;
+        height: 30px;
+        border-width: 2.5px;
+    }
+}

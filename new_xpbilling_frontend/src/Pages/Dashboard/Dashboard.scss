@@ -1,0 +1,1511 @@
+// ============================================
+// GOOGLE FONTS IMPORT
+// ============================================
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+// ============================================
+// VARIABLES
+// ============================================
+$primary-color: #3f3f91;
+$primary-light: #6a6ac5;
+$primary-dark: #2d2f87;
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #e67e22;
+$info-color: #17a2b8;
+$muted-color: #95a5a6;
+$bg-color: #dfeafb;
+$white: #ffffff;
+
+$shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+$shadow-md: 0 6px 24px rgba(0, 0, 0, 0.10);
+$shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.13);
+
+$radius: 16px;
+$radius-sm: 10px;
+$radius-xs: 6px;
+
+// ============================================
+// MAIN WRAPPER
+// ============================================
+.db-main {
+    background: $bg-color !important;
+    font-family: 'Open Sans', sans-serif !important;
+    min-height: 100vh;
+    padding: 28px 30px 56px;
+}
+
+// ============================================
+// WELCOME HEADER
+// ============================================
+.db-welcome-header {
+    max-width: 1300px;
+    margin: 0 auto 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.db-welcome-left {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    h1 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 27px;
+        font-weight: 800;
+        color: $primary-dark;
+        margin: 0;
+        letter-spacing: -0.3px;
+
+        span {
+            color: $primary-light;
+        }
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #8891a5;
+        margin: 0;
+    }
+}
+
+.db-date-chip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: $white;
+    border: 1.5px solid #e3e8f0;
+    border-radius: 50px;
+    padding: 10px 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: $primary-color;
+    box-shadow: $shadow;
+    white-space: nowrap;
+
+    svg {
+        font-size: 13px;
+        color: $primary-light;
+    }
+}
+
+// ============================================
+// TIME FILTER TABS
+// ============================================
+.db-time-filters {
+    max-width: 1300px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: $white;
+    border-radius: 50px;
+    padding: 5px;
+    box-shadow: $shadow;
+    width: fit-content;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    button {
+        padding: 9px 24px;
+        border: none;
+        border-radius: 50px;
+        background: transparent;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #9aa0b0;
+        cursor: pointer;
+        transition: all 0.22s ease;
+        white-space: nowrap;
+        letter-spacing: 0.1px;
+
+        &:hover {
+            color: $primary-color;
+            background: #f5f6ff;
+        }
+
+        &.db-filter-active {
+            background: linear-gradient(135deg, $primary-color, $primary-light);
+            color: $white;
+            box-shadow: 0 3px 12px rgba(63, 63, 145, 0.35);
+        }
+    }
+}
+
+.db-filter-label-display {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #8891a5;
+    padding: 0 4px;
+
+    strong {
+        color: $primary-dark;
+        font-weight: 700;
+    }
+}
+
+// ============================================
+// STATS GRID — 4 CARDS
+// ============================================
+.db-stats-grid {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.db-stat-card {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    padding: 22px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    cursor: default;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: $shadow-md;
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3.5px;
+        border-radius: 3.5px 3.5px 0 0;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        opacity: 0.05;
+    }
+
+    &.db-stat-revenue {
+        &::before {
+            background: linear-gradient(90deg, $primary-color, $primary-light);
+        }
+
+        &::after {
+            background: $primary-color;
+        }
+    }
+
+    &.db-stat-invoices {
+        &::before {
+            background: linear-gradient(90deg, $info-color, #5bc0de);
+        }
+
+        &::after {
+            background: $info-color;
+        }
+    }
+
+    &.db-stat-customers {
+        &::before {
+            background: linear-gradient(90deg, $success-color, #5cb85c);
+        }
+
+        &::after {
+            background: $success-color;
+        }
+    }
+
+    &.db-stat-workshops {
+        &::before {
+            background: linear-gradient(90deg, $warning-color, #f0ad4e);
+        }
+
+        &::after {
+            background: $warning-color;
+        }
+    }
+}
+
+.db-stat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    font-size: 19px;
+    flex-shrink: 0;
+    align-self: flex-start;
+
+    &.db-icon-revenue {
+        background: linear-gradient(135deg, rgba(63, 63, 145, 0.12), rgba(106, 106, 197, 0.18));
+        color: $primary-color;
+        box-shadow: 0 4px 12px rgba(63, 63, 145, 0.12);
+    }
+
+    &.db-icon-invoices {
+        background: linear-gradient(135deg, rgba(23, 162, 184, 0.12), rgba(91, 192, 222, 0.18));
+        color: $info-color;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.12);
+    }
+
+    &.db-icon-customers {
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.12), rgba(92, 184, 92, 0.18));
+        color: $success-color;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.12);
+    }
+
+    &.db-icon-workshops {
+        background: linear-gradient(135deg, rgba(230, 126, 34, 0.12), rgba(240, 173, 78, 0.18));
+        color: $warning-color;
+        box-shadow: 0 4px 12px rgba(230, 126, 34, 0.12);
+    }
+}
+
+.db-stat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.db-stat-label {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    color: #9aa0b0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.db-stat-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 27px;
+    font-weight: 800;
+    color: $primary-dark;
+    line-height: 1.1;
+    margin-top: 3px;
+    letter-spacing: -0.5px;
+}
+
+.db-stat-change {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 5px;
+
+    svg {
+        font-size: 10px;
+    }
+
+    &.db-change-up {
+        color: $success-color;
+    }
+
+    &.db-change-down {
+        color: $danger-color;
+    }
+
+    &.db-change-neutral {
+        color: $muted-color;
+    }
+
+    .db-change-text {
+        color: #b0b8c8;
+        font-weight: 400;
+    }
+}
+
+// ============================================
+// MINI METRICS ROW
+// ============================================
+.db-mini-metrics {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.db-mini-metric-card {
+    background: $white;
+    border-radius: $radius-sm;
+    box-shadow: $shadow;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: $shadow-md;
+    }
+}
+
+.db-mini-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.db-mini-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.db-mini-label {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11.5px;
+    color: #9aa0b0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.db-mini-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: $primary-dark;
+    letter-spacing: -0.3px;
+}
+
+// ============================================
+// CHART LAYOUT ROWS
+// ============================================
+.db-charts-row {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    display: grid;
+    gap: 18px;
+
+    &.db-charts-row-70-30 {
+        grid-template-columns: 1.85fr 1fr;
+    }
+
+    &.db-charts-row-50-50 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    &.db-charts-row-33-33-33 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.db-full-row {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    display: grid;
+    gap: 18px;
+
+    &.db-full-row-2 {
+        grid-template-columns: 1.3fr 1fr;
+    }
+
+    &.db-full-row-3 {
+        grid-template-columns: repeat(3, 1fr);
+        margin-top: 20px;
+    }
+}
+
+.db-full-row-4 {
+    max-width: 1300px;
+    margin: 0 auto 22px;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+// ============================================
+// CHART CARD
+// ============================================
+.db-chart-card {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+        box-shadow: $shadow-md;
+    }
+}
+
+.db-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid #f0f2f8;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    h3 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 14.5px;
+        font-weight: 700;
+        color: $primary-dark;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+
+        svg {
+            color: $primary-light;
+            font-size: 14px;
+        }
+    }
+}
+
+.db-chart-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, rgba(63, 63, 145, 0.07), rgba(106, 106, 197, 0.12));
+    color: $primary-color;
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    border: 1px solid rgba(106, 106, 197, 0.15);
+}
+
+.db-chart-badge-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .db-chart-badge {
+        &.db-badge-revenue {
+            background: linear-gradient(135deg, rgba(63, 63, 145, 0.07), rgba(106, 106, 197, 0.12));
+            color: $primary-color;
+            border-color: rgba(106, 106, 197, 0.15);
+        }
+
+        &.db-badge-purchase {
+            background: linear-gradient(135deg, rgba(230, 126, 34, 0.07), rgba(240, 173, 78, 0.12));
+            color: $warning-color;
+            border-color: rgba(230, 126, 34, 0.15);
+        }
+    }
+}
+
+.db-chart-body {
+    padding: 20px 16px;
+    flex: 1;
+}
+
+// ============================================
+// CHART EMPTY STATE
+// ============================================
+.db-chart-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 44px 20px;
+    gap: 12px;
+    text-align: center;
+
+    svg {
+        font-size: 40px;
+        color: #d0d6e4;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #b0b8c8;
+        font-size: 13.5px;
+        margin: 0;
+    }
+}
+
+// ============================================
+// TOP ITEMS (XP Oils, Dispenser Oils, Packages)
+// ============================================
+.db-top-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 6px;
+    border-bottom: 1px solid #f5f6fa;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #fafbff;
+        border-radius: 6px;
+    }
+}
+
+.db-top-rank {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #d0d6e4;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.db-top-name {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: $primary-dark;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.db-top-qty {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8891a5;
+    flex-shrink: 0;
+    padding: 2px 10px;
+    background: #f0f2f8;
+    border-radius: 12px;
+}
+
+.db-top-revenue {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: $success-color;
+    flex-shrink: 0;
+    min-width: 70px;
+    text-align: right;
+}
+
+// ============================================
+// INVENTORY SALES & PURCHASE LISTS
+// ============================================
+.db-inventory-sales-list,
+.db-inventory-purchase-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.db-inv-sale-item,
+.db-inv-purchase-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f8f9fd;
+    transition: background 0.15s, transform 0.15s;
+    border-left: 3px solid transparent;
+
+    &:hover {
+        background: #f0f2f8;
+        transform: translateX(3px);
+    }
+
+    &.db-inv-xp {
+        border-left-color: $primary-color;
+    }
+
+    &.db-inv-dispenser {
+        border-left-color: $warning-color;
+    }
+
+    &.db-inv-package {
+        border-left-color: $info-color;
+    }
+}
+
+.db-inv-sale-icon,
+.db-inv-purchase-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 13px;
+    flex-shrink: 0;
+    background: $white;
+    color: $primary-color;
+    box-shadow: $shadow-sm;
+}
+
+.db-inv-sale-name,
+.db-inv-purchase-name {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: $primary-dark;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.db-inv-sale-revenue,
+.db-inv-purchase-cost {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.db-inv-sale-revenue {
+    color: $success-color;
+}
+
+.db-inv-purchase-cost {
+    color: $warning-color;
+}
+
+// ============================================
+// WORKSHOPS CARDS
+// ============================================
+.db-workshops-card {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+        box-shadow: $shadow-md;
+    }
+}
+
+.db-workshop-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f5f6fa;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #fafbff;
+    }
+
+    &.db-upcoming {
+        background: #fafffe;
+
+        &:hover {
+            background: #f0faf5;
+        }
+    }
+}
+
+.db-workshop-date {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $primary-dark;
+    min-width: 85px;
+    flex-shrink: 0;
+}
+
+.db-workshop-time {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #8891a5;
+    min-width: 55px;
+    flex-shrink: 0;
+}
+
+.db-workshop-customers {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #555;
+    flex: 1;
+    text-align: right;
+}
+
+.db-workshop-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: linear-gradient(135deg, $success-color, #5cb85c);
+    color: $white;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+// ============================================
+// PENDING INVOICES ITEMS
+// ============================================
+.db-pending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f5f6fa;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #fafbff;
+    }
+}
+
+.db-pending-date {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $primary-dark;
+    min-width: 85px;
+    flex-shrink: 0;
+}
+
+.db-pending-time {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #8891a5;
+    min-width: 55px;
+    flex-shrink: 0;
+}
+
+.db-pending-customers {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #555;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.db-pending-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: #f8d7da;
+    color: #721c24;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+// ============================================
+// RECENT INVOICES TABLE CARD
+// ============================================
+.db-recent-table-card {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    margin-top: 20px;
+
+    &:hover {
+        box-shadow: $shadow-md;
+    }
+}
+
+.db-card-full {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+        box-shadow: $shadow-md;
+    }
+}
+
+// ── Shared header for tables and cards ──
+.db-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid #f0f2f8;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    h3 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 14.5px;
+        font-weight: 700;
+        color: $primary-dark;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+
+        svg {
+            color: $primary-light;
+            font-size: 14px;
+        }
+    }
+}
+
+.db-view-all-link {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: $primary-light;
+    text-decoration: none;
+    transition: color 0.18s;
+    letter-spacing: 0.1px;
+
+    &:hover {
+        color: $primary-dark;
+    }
+}
+
+.db-table-wrap {
+    overflow-x: auto;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 480px;
+
+        thead {
+            background: #f7f8fc;
+            border-bottom: 1.5px solid #eaeef6;
+        }
+
+        th {
+            padding: 11px 20px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #9aa0b0;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 13px 20px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13.5px;
+            color: #3a3a5c;
+            border-bottom: 1px solid #f5f6fa;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #fafbff;
+        }
+    }
+}
+
+.db-invoice-num {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    color: $primary-color;
+    font-size: 13.5px;
+}
+
+.db-customer-name {
+    font-weight: 600;
+    color: #2d2d50;
+}
+
+.db-amount {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    color: $success-color;
+    font-size: 13.5px;
+}
+
+// ============================================
+// STATUS / PAYMENT BADGES
+// ============================================
+.db-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+
+    &.db-status-paid {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    &.db-status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    &.db-status-cancelled {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    &.db-status-cash {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    &.db-status-upi {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    &.db-status-card {
+        background: #e2d9f3;
+        color: #5e2d91;
+    }
+}
+
+// ============================================
+// INVENTORY ALERTS CARD
+// ============================================
+.db-inventory-alerts-card {
+    background: $white;
+    border-radius: $radius;
+    box-shadow: $shadow;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    margin-top: 20px;
+
+    &:hover {
+        box-shadow: $shadow-md;
+    }
+}
+
+.db-inventory-alerts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+
+    @media screen and (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.db-alert-section {
+    padding: 16px 20px;
+
+    &:first-child {
+        border-right: 1px solid #f0f2f8;
+    }
+
+    @media screen and (max-width: 768px) {
+        &:first-child {
+            border-right: none;
+            border-bottom: 1px solid #f0f2f8;
+        }
+    }
+}
+
+.db-alert-empty {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $danger-color;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    svg {
+        font-size: 13px;
+    }
+}
+
+.db-alert-low {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $warning-color;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    svg {
+        font-size: 13px;
+    }
+}
+
+.db-alert-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f5f6fa;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #fafbff;
+        border-radius: 6px;
+    }
+}
+
+.db-alert-name {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    color: #2d2d50;
+    font-size: 13px;
+}
+
+.db-alert-qty {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+
+    &.db-alert-empty {
+        color: $danger-color;
+    }
+
+    &.db-alert-low {
+        color: $warning-color;
+    }
+}
+
+.db-alert-empty-state {
+    text-align: center;
+    padding: 36px 20px;
+
+    svg {
+        font-size: 38px;
+        color: $success-color;
+        opacity: 0.7;
+        margin-bottom: 12px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #9aa0b0;
+        font-size: 13.5px;
+        margin: 0;
+    }
+}
+
+// ============================================
+// LOYALTY SUMMARY
+// ============================================
+.db-loyalty-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 20px 22px;
+
+    @media screen and (max-width: 768px) {
+        grid-template-columns: 1fr 1fr;
+        padding: 16px 18px;
+    }
+
+    @media screen and (max-width: 480px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.db-loyalty-item {
+    background: #f8f9fd;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #f0f2f8;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-sm;
+    }
+}
+
+.db-loyalty-label {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #9aa0b0;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.db-loyalty-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: $primary-dark;
+
+    &.db-loyalty-earned {
+        color: $success-color;
+    }
+
+    &.db-loyalty-used {
+        color: $danger-color;
+    }
+
+    &.db-loyalty-discount {
+        color: $warning-color;
+    }
+
+    &.db-loyalty-net {
+        color: $primary-color;
+    }
+}
+
+// ============================================
+// LOADING & SKELETON
+// ============================================
+.db-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 18px;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #9aa0b0;
+        font-size: 14px;
+        margin: 0;
+    }
+}
+
+.db-loading-spinner {
+    width: 46px;
+    height: 46px;
+    border: 3.5px solid #e8eaf0;
+    border-top: 3.5px solid $primary-color;
+    border-radius: 50%;
+    animation: db-spin 0.8s linear infinite;
+}
+
+@keyframes db-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.db-skeleton {
+    background: linear-gradient(90deg,
+            #eef0f6 25%,
+            #e6e8f0 50%,
+            #eef0f6 75%);
+    background-size: 200% 100%;
+    animation: db-shimmer 1.5s infinite;
+    border-radius: $radius-xs;
+}
+
+@keyframes db-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.db-skeleton-text {
+    height: 13px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+
+    &.short {
+        width: 55%;
+    }
+
+    &.medium {
+        width: 75%;
+    }
+
+    &.full {
+        width: 100%;
+    }
+}
+
+// ============================================
+// RECHARTS GLOBAL OVERRIDES
+// ============================================
+.recharts-cartesian-axis-tick-value {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    fill: #9aa0b0;
+}
+
+.recharts-default-tooltip {
+    border-radius: 10px !important;
+    border: 1px solid #eaeef6 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10) !important;
+}
+
+.recharts-tooltip-label {
+    font-family: 'Roboto', sans-serif !important;
+    font-weight: 700 !important;
+    color: $primary-dark !important;
+}
+
+.recharts-legend-item-text {
+    font-family: 'Open Sans', sans-serif !important;
+    font-size: 12.5px !important;
+    color: #555 !important;
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media screen and (max-width: 1200px) {
+    .db-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .db-charts-row {
+
+        &.db-charts-row-70-30,
+        &.db-charts-row-50-50,
+        &.db-charts-row-33-33-33 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .db-full-row {
+
+        &.db-full-row-2,
+        &.db-full-row-3 {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .db-full-row-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .db-mini-metrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .db-main {
+        padding: 16px 14px 40px;
+    }
+
+    .db-welcome-header {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+
+    .db-welcome-left h1 {
+        font-size: 21px;
+    }
+
+    .db-date-chip {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+
+    .db-time-filters {
+        width: 100%;
+        border-radius: 12px;
+
+        button {
+            padding: 8px 16px;
+            font-size: 12.5px;
+        }
+    }
+
+    .db-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+
+    .db-stat-value {
+        font-size: 22px;
+    }
+
+    .db-mini-metrics {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .db-mini-value {
+        font-size: 16px;
+    }
+
+    .db-charts-row,
+    .db-full-row {
+        grid-template-columns: 1fr !important;
+        gap: 14px;
+    }
+
+    .db-full-row-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .db-chart-header {
+        padding: 14px 16px 12px;
+    }
+
+    .db-chart-body {
+        padding: 14px 10px;
+    }
+
+    .db-table-wrap table th,
+    .db-table-wrap table td {
+        padding: 11px 14px;
+        font-size: 13px;
+    }
+
+    .db-workshop-item,
+    .db-pending-item {
+        padding: 10px 14px;
+        flex-wrap: wrap;
+    }
+
+    .db-workshop-date,
+    .db-pending-date {
+        min-width: 70px;
+    }
+
+    .db-top-item {
+        padding: 10px 4px;
+    }
+
+    .db-inv-sale-item,
+    .db-inv-purchase-item {
+        padding: 8px 10px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .db-stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .db-stat-card {
+        padding: 16px 14px;
+    }
+
+    .db-stat-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+
+    .db-stat-value {
+        font-size: 20px;
+    }
+
+    .db-mini-metrics {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .db-full-row-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .db-loyalty-grid {
+        grid-template-columns: 1fr 1fr;
+        padding: 14px 16px;
+    }
+
+    .db-loyalty-value {
+        font-size: 17px;
+    }
+
+    .db-chart-badge-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .db-inventory-alerts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .db-alert-section:first-child {
+        border-right: none;
+        border-bottom: 1px solid #f0f2f8;
+    }
+}

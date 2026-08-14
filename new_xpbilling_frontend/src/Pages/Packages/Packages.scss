@@ -1,0 +1,958 @@
+// ============================================
+// GOOGLE FONTS IMPORT
+// ============================================
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+// ============================================
+// VARIABLES
+// ============================================
+$primary-color: #3f3f91;
+$primary-light: #6a6ac5;
+$primary-dark: #2d2f87;
+$success-color: #28a745;
+$danger-color: #dc3545;
+$warning-color: #e67e22;
+$info-color: #17a2b8;
+$bg-color: #dfeafb;
+$white: #ffffff;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+$border-radius: 14px;
+$border-radius-sm: 8px;
+
+// ============================================
+// MAIN
+// ============================================
+.pk-main {
+    background: $bg-color !important;
+    font-family: 'Open Sans', sans-serif !important;
+    min-height: 100vh;
+    padding: 24px 28px 40px;
+}
+
+// ============================================
+// PAGE HEADER
+// ============================================
+.pk-page-header {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    padding: 18px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+
+    h2 {
+        font-family: 'Roboto', sans-serif !important;
+        font-size: 22px;
+        font-weight: 700;
+        color: $primary-dark;
+        margin: 0;
+    }
+
+    .pk-right-section {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .pk-search-container {
+        position: relative;
+        width: 250px;
+
+        input {
+            width: 100%;
+            padding: 9px 14px 9px 38px;
+            border: 1.5px solid #e3e8f0;
+            border-radius: 50px;
+            background: #f5f7fa;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.25s;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-light;
+                background: $white;
+                box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+            }
+
+            &::placeholder {
+                color: #aab0bc;
+            }
+        }
+
+        .pk-search-icon {
+            position: absolute;
+            top: 50%;
+            left: 13px;
+            transform: translateY(-50%);
+            color: #aab0bc;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    }
+
+    .pk-action-buttons-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: $white;
+            padding: 9px 20px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            border-radius: 50px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.13);
+            letter-spacing: 0.2px;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+            }
+
+            &:active {
+                transform: translateY(0);
+            }
+        }
+
+        .pk-add-btn {
+            background: linear-gradient(135deg, $warning-color, #f39c12);
+
+            &:hover {
+                background: linear-gradient(135deg, #d35400, $warning-color);
+                box-shadow: 0 5px 14px rgba(230, 126, 34, 0.35);
+            }
+        }
+    }
+}
+
+// ============================================
+// FORM CONTAINER
+// ============================================
+.pk-form-container {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    padding: 28px 28px 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    border-top: 3px solid $primary-light;
+
+    h2 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 22px;
+        color: $primary-color;
+    }
+
+    .pk-form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 18px;
+
+        .pk-form-field {
+            flex: 1;
+        }
+    }
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 7px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 500;
+        font-size: 13.5px;
+        color: #555;
+    }
+
+    input[type='text'],
+    input[type='number'] {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        transition: border 0.25s, box-shadow 0.25s;
+        background: #fafbfc;
+        box-sizing: border-box;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &::placeholder {
+            color: #bfc5ce;
+        }
+    }
+
+    select.pk-form-select {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1.5px solid #e3e8f0;
+        border-radius: $border-radius-sm;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background: #fafbfc;
+        box-sizing: border-box;
+        transition: border 0.25s, box-shadow 0.25s;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 13px center;
+
+        &:focus {
+            border-color: $primary-light;
+            outline: none;
+            background: $white;
+            box-shadow: 0 0 0 3px rgba(106, 106, 197, 0.12);
+        }
+
+        &:disabled {
+            background: #f0f2f5;
+            cursor: not-allowed;
+            color: #aab0bc;
+        }
+    }
+
+    .pk-field-hint {
+        display: block;
+        color: #aab0bc;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+
+    .pk-form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .pk-cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: #f0f2f8;
+        color: #555;
+        border: 1.5px solid #dde1ed;
+        padding: 10px 24px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #e5e8f0;
+            border-color: #c8cde0;
+        }
+    }
+
+    .pk-save-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: linear-gradient(135deg, $primary-color, $primary-light);
+        color: $white;
+        border: none;
+        padding: 10px 28px;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 3px 10px rgba(63, 63, 145, 0.25);
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, $primary-dark, $primary-color);
+            box-shadow: 0 5px 14px rgba(63, 63, 145, 0.35);
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            background: #9e9ecc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    }
+}
+
+// ============================================
+// DATA TABLE
+// ============================================
+.pk-data-table {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    background: $white;
+    border-radius: $border-radius;
+    box-shadow: $shadow;
+    overflow-x: auto;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 900px;
+
+        thead {
+            background: #f7f8fc;
+            border-bottom: 1.5px solid #eaeef6;
+        }
+
+        th {
+            padding: 14px 20px;
+            text-align: left;
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b6b9a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 13px 20px;
+            text-align: left;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            color: #3a3a5c;
+            border-bottom: 1px solid #f0f2f8;
+        }
+
+        tr {
+            transition: background-color 0.15s;
+
+            &:last-child td {
+                border-bottom: none;
+            }
+
+            &:hover td {
+                background-color: #f5f6fb;
+            }
+        }
+
+        // Column styles
+        td.pk-name-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: $primary-color;
+        }
+
+        td.pk-price-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: $success-color;
+        }
+
+        td.pk-discount-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: $warning-color;
+        }
+
+        td.pk-oil-count-cell {
+            text-align: center;
+        }
+
+        td.pk-ml-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 600;
+            color: $info-color;
+        }
+
+        td.pk-filling-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 600;
+            color: #8e44ad;
+        }
+
+        td.pk-fragrance-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 600;
+            color: #e67e22;
+        }
+
+        td.pk-alcohol-cell {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 600;
+            color: #2980b9;
+        }
+    }
+}
+
+// Oil count pill
+.pk-oil-count-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #e8f0fe;
+    color: $primary-color;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.pk-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+
+    .pk-empty-icon {
+        font-size: 42px;
+        color: #ccd2e0;
+        margin-bottom: 12px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #aab0bc;
+        font-size: 14.5px;
+        margin: 0;
+    }
+}
+
+// ============================================
+// STATUS BADGE
+// ============================================
+.pk-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+
+    &.pk-active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    &.pk-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+}
+
+// ============================================
+// ACTION BUTTONS (table row)
+// ============================================
+.pk-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .pk-edit-btn {
+        background: $primary-color;
+        color: $white;
+
+        &:hover:not(:disabled) {
+            background: $primary-dark;
+        }
+    }
+
+    .pk-toggle-btn {
+        color: $white;
+
+        &.pk-deactivate {
+            background: $warning-color;
+
+            &:hover:not(:disabled) {
+                background: #d35400;
+            }
+        }
+
+        &.pk-activate {
+            background: $success-color;
+
+            &:hover:not(:disabled) {
+                background: #219653;
+            }
+        }
+    }
+
+    .pk-delete-btn {
+        background: $danger-color;
+        color: $white;
+        width: 32px;
+        padding: 6px;
+        justify-content: center;
+
+        &:hover:not(:disabled) {
+            background: #c82333;
+        }
+    }
+}
+
+// ============================================
+// LOADING
+// ============================================
+.pk-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 40px;
+    text-align: center;
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #888;
+        font-size: 15px;
+        margin: 14px 0 0;
+    }
+}
+
+.pk-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid #e8eaf0;
+    border-top: 2.5px solid $primary-color;
+    border-radius: 50%;
+    animation: pk-spin 0.8s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+
+    &.large {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+
+    &.small {
+        width: 16px;
+        height: 16px;
+        border-width: 2px;
+    }
+}
+
+@keyframes pk-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+// ============================================
+// DELETE MODAL
+// ============================================
+.pk-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 30, 60, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: pk-fadeIn 0.2s ease-out;
+
+    @keyframes pk-fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+}
+
+.pk-modal-content {
+    background: $white;
+    border-radius: $border-radius;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 8px 32px rgba(30, 30, 60, 0.18);
+    animation: pk-slideUp 0.25s ease-out;
+    overflow: hidden;
+
+    @keyframes pk-slideUp {
+        from {
+            transform: translateY(16px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+.pk-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid #eaeef6;
+
+    .pk-modal-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: $danger-color;
+    }
+
+    .pk-modal-close {
+        background: #f5f6fa;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 14px;
+        cursor: pointer;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #ffe8e8;
+            color: $danger-color;
+        }
+    }
+}
+
+.pk-modal-body {
+    padding: 28px 24px;
+    text-align: center;
+
+    .pk-delete-icon {
+        font-size: 42px;
+        color: $danger-color;
+        margin-bottom: 16px;
+    }
+
+    h3 {
+        font-family: 'Roboto', sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 10px;
+    }
+
+    p {
+        font-family: 'Open Sans', sans-serif;
+        color: #7f8c8d;
+        line-height: 1.6;
+        font-size: 14px;
+        margin: 0 0 20px;
+    }
+}
+
+// Package detail card inside delete modal
+.pk-detail-card {
+    background: #fff8f0;
+    border: 1px solid #f5c88a;
+    border-radius: $border-radius-sm;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    text-align: left;
+
+    .pk-detail-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+
+        svg {
+            color: $warning-color;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        strong {
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #856404;
+        }
+    }
+
+    .pk-detail-card-info {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 13px;
+        color: #856404;
+        line-height: 1.8;
+
+        strong {
+            font-weight: 700;
+        }
+    }
+}
+
+// Modal action buttons
+.pk-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 50px;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .pk-btn-cancel {
+        background: #f0f2f8;
+        color: #555;
+        border: 1.5px solid #dde1ed;
+
+        &:hover {
+            background: #e5e8f0;
+        }
+    }
+
+    .pk-btn-delete {
+        background: $danger-color;
+        color: $white;
+        box-shadow: 0 3px 8px rgba(220, 53, 69, 0.25);
+
+        &:hover:not(:disabled) {
+            background: #c82333;
+            box-shadow: 0 5px 12px rgba(220, 53, 69, 0.35);
+        }
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media screen and (max-width: 992px) {
+    .pk-data-table table {
+        min-width: 1100px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .pk-main {
+        padding: 16px 14px 32px;
+    }
+
+    .pk-page-header {
+        padding: 14px 16px;
+
+        h2 {
+            font-size: 18px;
+        }
+
+        .pk-right-section {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .pk-search-container {
+            width: 100%;
+        }
+
+        .pk-action-buttons-group {
+            width: 100%;
+
+            button {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    }
+
+    .pk-data-table table {
+
+        th,
+        td {
+            padding: 11px 14px;
+            font-size: 13px;
+        }
+    }
+
+    .pk-form-container {
+        padding: 18px;
+
+        .pk-form-row {
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .pk-form-actions {
+            flex-direction: column;
+
+            button {
+                justify-content: center;
+            }
+        }
+    }
+
+    .pk-modal-content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .pk-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .pk-row-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+
+        button {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        .pk-delete-btn {
+            width: 28px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .pk-modal-body {
+        padding: 20px 16px;
+    }
+
+    .pk-modal-header {
+        padding: 14px 16px;
+    }
+
+    .pk-page-header h2 {
+        font-size: 16px;
+    }
+
+    .pk-data-table table {
+
+        th,
+        td {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+    }
+}
+
+// ============================================
+// DENSITY BADGE & HINT
+// ============================================
+.pd-density-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 10px;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    border: 1px solid #ffeaa7;
+}
+
+.pd-density-hint {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 400;
+    color: #aab0bc;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.pd-density-cell {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    color: #2d2d50;
+}
+
+// ============================================
+// FIELD HINT
+// ============================================
+.pd-field-hint {
+    display: block;
+    color: #aab0bc;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    margin-top: 6px;
+}
