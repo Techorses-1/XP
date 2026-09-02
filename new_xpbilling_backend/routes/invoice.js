@@ -1037,7 +1037,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     });
                 }
 
-                // ✅ CHANGED: Find XPInventory using xpId (not dispenserId)
+                // ✅ Find XPInventory using xpId
                 const xpOil = await XPInventory.findOne({ xpId });
                 if (!xpOil) {
                     console.log("❌ XP Oil not found:", xpId);
@@ -1118,7 +1118,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 console.log(`  💰 Final Price: ₹${finalPrice}`);
 
                 dispenserItemsData.push({
-                    // ✅ CHANGED: Store xpId (not dispenserId)
                     xpId: xpOil.xpId,
                     productName: xpOil.productName,
                     ml: ml,
@@ -1137,15 +1136,23 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 totalDispenserDiscount += discountAmount;
                 hasDispenser = true;
 
-                // ✅ REDUCE XP Inventory - USING invoiceNumber (defined at the start)
+                // ✅ REDUCE XP Inventory
                 await reduceXPOil(
                     xpOil.xpId,
-                    totalML, // quantity in ml
+                    totalML,
                     req.user,
                     'Invoice - Dispenser',
                     `Reduced for invoice ${invoiceNumber} (${xpOil.productName}: ${ml}ml × ${quantity})`
                 );
 
+                // ✅ ADDED: REDUCE BOTTLE INVENTORY FOR DISPENSERS
+                await reduceBottlesInventory(
+                    ml.toString(),
+                    quantity,
+                    req.user,
+                    'Invoice - Dispenser',
+                    `Reduced for invoice ${invoiceNumber} (Dispenser: ${xpOil.productName}, ${ml}ml × ${quantity})`
+                );
             }
             console.log("  ✅ All dispenser items validated and inventory reduced");
         } else {
@@ -1806,11 +1813,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         if (dispenserItems && dispenserItems.length > 0) {
             console.log("  💧 New Dispenser Items:", dispenserItems.length);
             for (const item of dispenserItems) {
-                // ✅ CHANGED: Use xpId instead of dispenserId
                 const { xpId, ml, quantity, unitPrice, discount } = item;
                 console.log(`  📦 Item: XP ID: ${xpId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
 
-                // ✅ CHANGED: Validate xpId instead of dispenserId
                 if (!xpId || !ml || !quantity) {
                     console.log("❌ Missing dispenser item fields");
                     await logFailed({
@@ -1859,7 +1864,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     });
                 }
 
-                // ✅ CHANGED: Find XPInventory using xpId (not dispenserId)
                 const xpOil = await XPInventory.findOne({ xpId });
                 if (!xpOil) {
                     console.log("❌ XP Oil not found:", xpId);
@@ -1900,7 +1904,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 }
                 console.log(`  ✅ Stock sufficient`);
 
-                // Check Bottles Inventory for dispenser
                 const mlSize = ml.toString();
                 const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
@@ -1923,11 +1926,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
-                // ✅ CHANGED: Get selling prices from XPInventory
                 const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
 
-                // Calculate using existing schema fields
                 const itemDiscountPercent = discount !== undefined ? discount : 0;
                 const originalTotal = baseUnitPrice * quantity;
                 const discountAmount = (originalTotal * itemDiscountPercent) / 100;
@@ -1939,9 +1940,8 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 console.log(`  💰 Discount: ${itemDiscountPercent}% (₹${discountAmount})`);
                 console.log(`  💰 Final Price: ₹${finalPrice}`);
 
-                // ✅ CHANGED: Store xpId (not dispenserId)
                 newDispenserItems.push({
-                    xpId: xpOil.xpId,                    // ✅ CHANGED
+                    xpId: xpOil.xpId,
                     productName: xpOil.productName,
                     ml: ml,
                     quantity: quantity,
@@ -2009,6 +2009,43 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 console.log(`  ✅ Bottles returned: ${oldPackage.bottleML}ml`);
 
             } else {
+                // ============================================
+                // ✅ ADDED: Handle Bottle Change when Package is changed
+                // ============================================
+                const oldBottleML = oldPackage.bottleML.toString();
+                const newBottleML = selectedPackage.bottleML.toString();
+
+                if (oldBottleML !== newBottleML) {
+                    console.log(`  🧴 Bottle changed: ${oldBottleML}ml → ${newBottleML}ml`);
+
+                    // Return OLD bottle
+                    await returnBottlesInventory(
+                        oldBottleML,
+                        1,
+                        req.user,
+                        'Invoice Edit - Package Changed',
+                        `Returned old bottle ${oldBottleML}ml for invoice ${invoiceNumber} (Package changed: ${oldPackage.packageName} → ${selectedPackage.packageName})`
+                    );
+                    inventoryChanges.push({ type: 'Bottles Returned (Package Changed - Old)', details: { oldBottleML, newBottleML } });
+                    console.log(`  ✅ Old ${oldBottleML}ml bottle returned`);
+
+                    // Reduce NEW bottle
+                    await reduceBottlesInventory(
+                        newBottleML,
+                        1,
+                        req.user,
+                        'Invoice Edit - Package Changed',
+                        `Reduced new bottle ${newBottleML}ml for invoice ${invoiceNumber} (Package changed: ${oldPackage.packageName} → ${selectedPackage.packageName})`
+                    );
+                    inventoryChanges.push({ type: 'Bottles Reduced (Package Changed - New)', details: { oldBottleML, newBottleML } });
+                    console.log(`  ✅ New ${newBottleML}ml bottle reduced`);
+                } else {
+                    console.log(`  ℹ️ Bottle size unchanged: ${oldBottleML}ml`);
+                }
+
+                // ============================================
+                // Existing XP Oil Change Code
+                // ============================================
                 const oldXPOilMap = new Map();
                 for (const item of oldXPOilItems) {
                     oldXPOilMap.set(item.xpId, item);
@@ -2077,20 +2114,18 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             console.log("  📦 New Package added - Reducing stock...");
         }
 
-        // 5b. Handle Dispenser Changes - UPDATED TO USE XP ID
+        // 5b. Handle Dispenser Changes - UPDATED TO USE DIFFERENCE LOGIC
         console.log("\n  💧 Handling Dispenser Changes (using XP ID)...");
         const oldDispenserItems = originalInvoice.dispenserItems || [];
         const newDispenserMap = new Map();
         const oldDispenserMap = new Map();
 
-        // ✅ CHANGED: Use xpId for keys
         for (const item of newDispenserItems) {
             const key = `${item.xpId}-${item.ml}`;
             newDispenserMap.set(key, item);
         }
 
         for (const item of oldDispenserItems) {
-            // ✅ CHANGED: Use xpId for keys (old items should have xpId now)
             const key = `${item.xpId}-${item.ml}`;
             oldDispenserMap.set(key, item);
         }
@@ -2100,7 +2135,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         for (const [key, oldItem] of oldDispenserMap) {
             if (!newDispenserMap.has(key)) {
                 console.log(`  🔄 Dispenser REMOVED: ${oldItem.productName}`);
-                // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
                 await returnXPOil(
                     oldItem.xpId,
                     oldItem.totalML || (oldItem.ml * oldItem.quantity),
@@ -2133,7 +2167,37 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
 
                     console.log(`  🔄 Dispenser CHANGED: ${oldItem.productName} | Qty: ${oldItem.quantity}→${newItem.quantity} | Unit Price: ${oldItem.unitPrice}→${newItem.unitPrice} | Discount: ${oldItem.discount}%→${newItem.discount}%`);
 
-                    // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
+                    // ✅ FIXED: Only adjust by the DIFFERENCE
+                    const quantityDiff = oldItem.quantity - newItem.quantity;
+
+                    if (quantityDiff > 0) {
+                        // Old quantity > New quantity - RETURN the difference
+                        console.log(`  📦 Returning ${quantityDiff} bottle(s) (quantity decreased)`);
+                        await returnBottlesInventory(
+                            oldItem.ml.toString(),
+                            quantityDiff,
+                            req.user,
+                            'Invoice Edit - Quantity Decreased',
+                            `Returned ${quantityDiff} bottle(s) for invoice ${invoiceNumber} (${oldItem.productName}: ${oldItem.quantity} → ${newItem.quantity})`
+                        );
+                        inventoryChanges.push({ type: 'Bottles Returned (Quantity Decreased)', details: { oldItem, newItem, diff: quantityDiff } });
+                    } else if (quantityDiff < 0) {
+                        // New quantity > Old quantity - REDUCE the difference
+                        const diff = Math.abs(quantityDiff);
+                        console.log(`  📦 Reducing ${diff} bottle(s) (quantity increased)`);
+                        await reduceBottlesInventory(
+                            newItem.ml.toString(),
+                            diff,
+                            req.user,
+                            'Invoice Edit - Quantity Increased',
+                            `Reduced ${diff} bottle(s) for invoice ${invoiceNumber} (${newItem.productName}: ${oldItem.quantity} → ${newItem.quantity})`
+                        );
+                        inventoryChanges.push({ type: 'Bottles Reduced (Quantity Increased)', details: { oldItem, newItem, diff } });
+                    } else {
+                        console.log(`  ℹ️ Quantity unchanged for ${oldItem.productName}`);
+                    }
+
+                    // ✅ XP Oil - always return old + reduce new (since XP oil is measured in ml, not units)
                     await returnXPOil(
                         oldItem.xpId,
                         oldItem.totalML || (oldItem.ml * oldItem.quantity),
@@ -2144,17 +2208,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     inventoryChanges.push({ type: 'XP Oil Returned (Dispenser Changed)', details: oldItem });
                     console.log(`  ✅ Old XP Oil returned`);
 
-                    await returnBottlesInventory(
-                        oldItem.ml.toString(),
-                        oldItem.quantity,
-                        req.user,
-                        'Invoice Edit - Return',
-                        `Returned for invoice ${invoiceNumber} (Bottles for changed dispenser: ${oldItem.productName})`
-                    );
-                    inventoryChanges.push({ type: 'Bottles Returned (Changed)', details: oldItem });
-                    console.log(`  ✅ Old bottles returned`);
-
-                    // ✅ CHANGED: Use reduceXPOil instead of reduceDispenserOil
                     await reduceXPOil(
                         newItem.xpId,
                         newItem.totalML || (newItem.ml * newItem.quantity),
@@ -2165,21 +2218,11 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     inventoryChanges.push({ type: 'XP Oil Reduced (Dispenser New)', details: newItem });
                     console.log(`  ✅ New XP Oil reduced`);
 
-                    await reduceBottlesInventory(
-                        newItem.ml.toString(),
-                        newItem.quantity,
-                        req.user,
-                        'Invoice Edit - New Reduction',
-                        `Reduced for invoice ${invoiceNumber} (Bottles for new dispenser: ${newItem.productName})`
-                    );
-                    inventoryChanges.push({ type: 'Bottles Reduced (New)', details: newItem });
-                    console.log(`  ✅ New bottles reduced`);
                 } else {
                     console.log(`  ℹ️ Dispenser unchanged: ${oldItem.productName}`);
                 }
             } else {
                 console.log(`  ➕ New dispenser ADDED: ${newItem.productName}`);
-                // ✅ CHANGED: Use reduceXPOil instead of reduceDispenserOil
                 await reduceXPOil(
                     newItem.xpId,
                     newItem.totalML || (newItem.ml * newItem.quantity),

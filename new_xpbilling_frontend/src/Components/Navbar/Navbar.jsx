@@ -221,17 +221,17 @@ const Navbar = ({
         {
           id: 'inventory-xp',
           icon: <FaFlask />,
-          title: "XP Inventory",
+          title: "Inventory",
           path: "/inventory/xp",
           permission: "inventory"
         },
-        {
-          id: 'inventory-dispenser',
-          icon: <FaSyringe />,
-          title: "Dispenser Inventory",
-          path: "/inventory/dispenser",
-          permission: "inventory"
-        },
+        // {
+        //   id: 'inventory-dispenser',
+        //   icon: <FaSyringe />,
+        //   title: "Dispenser Inventory",
+        //   path: "/inventory/dispenser",
+        //   permission: "inventory"
+        // },
         {
           id: 'inventory-bottles',
           icon: <TbBottle />,
