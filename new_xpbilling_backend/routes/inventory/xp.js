@@ -34,7 +34,7 @@ const upload = multer({
 // ============================================
 const MIN_STOCK_ALERT = 5;
 
-// ✅ ADD THIS - Invoice related reasons to exclude
+// ✅ Invoice related reasons to exclude
 const INVOICE_RELATED_REASONS = [
     'Invoice',
     'Invoice Return',
@@ -101,12 +101,21 @@ router.get("/get-all", auth, async (req, res) => {
             limit = 20,
             search = '',
             sortBy = 'productName',
-            sortOrder = 'asc'
+            sortOrder = 'asc',
+            status = 'all'
         } = req.query;
 
         let query = {};
         if (search && search.trim() !== '') {
             query.productName = { $regex: search.trim(), $options: 'i' };
+        }
+
+        // ✅ ADD STATUS FILTER
+        if (status === 'low') {
+            query.$expr = { $lt: ["$quantity", "$minStock"] };
+            query.quantity = { $gt: 0 };
+        } else if (status === 'out-of-stock') {
+            query.quantity = 0;
         }
 
         const total = await XPInventory.countDocuments(query);
@@ -190,13 +199,12 @@ router.get("/get-transactions", auth, async (req, res) => {
             transactionType,
             startDate,
             endDate,
-            hideInvoice = 'false'  // ✅ NEW: Filter out invoice transactions
+            hideInvoice = 'false'
         } = req.query;
 
         let result;
 
         if (xpId) {
-            // ✅ For single product - fetch with filter
             result = await getTransactionsWithFilter(
                 xpId,
                 parseInt(limit),
@@ -204,7 +212,6 @@ router.get("/get-transactions", auth, async (req, res) => {
                 hideInvoice === 'true'
             );
         } else {
-            // ✅ For all products - fetch with filter
             let matchConditions = {};
             if (productName) matchConditions.productName = productName;
 
@@ -218,10 +225,8 @@ router.get("/get-transactions", auth, async (req, res) => {
                 if (endDate) transactionMatch['transactions.createdAt']['$lte'] = new Date(endDate);
             }
 
-            // ✅ If hideInvoice is true, exclude invoice related transactions
             if (hideInvoice === 'true') {
                 transactionMatch['transactions.reason'] = { $nin: INVOICE_RELATED_REASONS };
-                // ✅ Also only show IN transactions
                 transactionMatch['transactions.transactionType'] = 'IN';
             }
 
@@ -292,7 +297,7 @@ router.get("/get-transactions", auth, async (req, res) => {
 });
 
 // ============================================
-// ✅ HELPER: Get transactions with filter for single product
+// HELPER: Get transactions with filter for single product
 // ============================================
 const getTransactionsWithFilter = async (xpId, limit, page, hideInvoice) => {
     const doc = await XPTransactions.findOne({ xpId }).lean();
@@ -300,17 +305,13 @@ const getTransactionsWithFilter = async (xpId, limit, page, hideInvoice) => {
 
     let transactions = doc.transactions || [];
 
-    // ✅ Apply filters
     if (hideInvoice) {
         transactions = transactions.filter(t => {
-            // Only IN transactions
             if (t.transactionType !== 'IN') return false;
-            // Exclude invoice related reasons
             return !INVOICE_RELATED_REASONS.includes(t.reason);
         });
     }
 
-    // Sort by createdAt descending
     transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const total = transactions.length;
@@ -326,9 +327,12 @@ const getTransactionsWithFilter = async (xpId, limit, page, hideInvoice) => {
     };
 };
 
+// ============================================
+// CREATE PRODUCT - UPDATED WITH SELLING PRICES
+// ============================================
 router.post("/create-product", auth, checkInventoryPermission, async (req, res) => {
     try {
-        const { productName } = req.body;
+        const { productName, sellingPrice3ml, sellingPrice6ml } = req.body;
 
         if (!productName || productName.trim() === '') {
             await logFailed({
@@ -373,6 +377,9 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
             avgPurchasePrice: 0,
             minStock: MIN_STOCK_ALERT,
             density: density,
+            // ✅ NEW: Selling prices
+            sellingPrice3ml: sellingPrice3ml !== undefined ? parseFloat(sellingPrice3ml) : 0,
+            sellingPrice6ml: sellingPrice6ml !== undefined ? parseFloat(sellingPrice6ml) : 0,
             createdBy: {
                 userId: req.user.userId,
                 userName: req.user.name,
@@ -387,8 +394,6 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
 
         await product.save();
 
-        // ✅ ✅ ✅ ADD THIS LINE ✅ ✅ ✅
-        // Create XPTransactions document with productName
         await XPTransactions.create({
             xpId: product.xpId,
             productName: nameTrim,
@@ -402,7 +407,7 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
             userEmail: req.user.email,
             action: 'Create Product',
             heading: 'Product Created Successfully',
-            description: `Product "${nameTrim}" created with density ${density}`
+            description: `Product "${nameTrim}" created with density ${density}, sellingPrice3ml: ${product.sellingPrice3ml}, sellingPrice6ml: ${product.sellingPrice6ml}`
         });
 
         res.status(201).json({
@@ -434,7 +439,7 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
 });
 
 // ============================================
-// ADD STOCK (Qty + Price) - FIXED
+// ADD STOCK (Qty + Price)
 // ============================================
 router.post("/add-stock", auth, checkInventoryPermission, async (req, res) => {
     try {
@@ -551,11 +556,9 @@ router.post("/add-stock", auth, checkInventoryPermission, async (req, res) => {
             }
         };
 
-        // ✅ FIX: Check if XPTransactions exists, if not create with productName
         let xpTransactionDoc = await XPTransactions.findOne({ xpId: product.xpId });
 
         if (!xpTransactionDoc) {
-            // Create new document with productName FIRST
             xpTransactionDoc = await XPTransactions.create({
                 xpId: product.xpId,
                 productName: nameTrim,
@@ -563,7 +566,6 @@ router.post("/add-stock", auth, checkInventoryPermission, async (req, res) => {
             });
         }
 
-        // Then add the transaction
         await XPTransactions.addTransaction(product.xpId, transactionData);
 
         await logSuccess({
@@ -600,12 +602,12 @@ router.post("/add-stock", auth, checkInventoryPermission, async (req, res) => {
 });
 
 // ============================================
-// UPDATE PRODUCT (Name only - density auto-updates)
+// UPDATE PRODUCT - UPDATED WITH SELLING PRICES
 // ============================================
 router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => {
     try {
         const { xpId } = req.params;
-        const { productName } = req.body;
+        const { productName, sellingPrice3ml, sellingPrice6ml } = req.body;
 
         const product = await XPInventory.findOne({ xpId });
         if (!product) {
@@ -659,7 +661,6 @@ router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => 
             });
         }
 
-        // ✅ Auto-update density based on new product name
         const density = getDensityForProduct(nameTrim);
 
         const updateData = {
@@ -671,6 +672,14 @@ router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => 
                 userEmail: req.user.email
             }
         };
+
+        // ✅ NEW: Update selling prices if provided
+        if (sellingPrice3ml !== undefined) {
+            updateData.sellingPrice3ml = parseFloat(sellingPrice3ml);
+        }
+        if (sellingPrice6ml !== undefined) {
+            updateData.sellingPrice6ml = parseFloat(sellingPrice6ml);
+        }
 
         const updatedProduct = await XPInventory.findOneAndUpdate(
             { xpId },
@@ -685,7 +694,7 @@ router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => 
             userEmail: req.user.email,
             action: 'Update Product',
             heading: 'Product Updated Successfully',
-            description: `Name changed to "${nameTrim}" with density ${density}`
+            description: `Name changed to "${nameTrim}" with density ${density}, sellingPrice3ml: ${updatedProduct.sellingPrice3ml}, sellingPrice6ml: ${updatedProduct.sellingPrice6ml}`
         });
 
         res.status(200).json({
@@ -775,7 +784,7 @@ router.delete("/delete/:xpId", auth, checkInventoryPermission, async (req, res) 
 });
 
 // ============================================
-// BULK UPLOAD - PRODUCTS (Name only) - WITH AUDIT
+// BULK UPLOAD - PRODUCTS (Name + Selling Prices) - WITH AUDIT
 // ============================================
 router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.single('file'), async (req, res) => {
     try {
@@ -802,7 +811,6 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
         const success = [];
         const bulkUploadId = `bulk-${Date.now()}`;
 
-        // ✅ Store original data for audit
         const originalData = result.originalData || [];
 
         for (let i = 0; i < result.success.length; i++) {
@@ -810,7 +818,7 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
             const rowNumber = row.rowNumber;
 
             try {
-                const { productName } = row;
+                const { productName, sellingPrice3ml, sellingPrice6ml } = row;
 
                 if (!productName || productName.trim() === '') {
                     errors.push({ row: rowNumber, productName, error: 'Product name is required' });
@@ -835,6 +843,9 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
                     avgPurchasePrice: 0,
                     minStock: MIN_STOCK_ALERT,
                     density: density,
+                    // ✅ NEW: Selling prices from Excel
+                    sellingPrice3ml: sellingPrice3ml !== undefined && sellingPrice3ml !== '' ? parseFloat(sellingPrice3ml) : 0,
+                    sellingPrice6ml: sellingPrice6ml !== undefined && sellingPrice6ml !== '' ? parseFloat(sellingPrice6ml) : 0,
                     createdBy: {
                         userId: req.user.userId,
                         userName: req.user.name,
@@ -858,7 +869,9 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
                 success.push({
                     row: rowNumber,
                     productName: nameTrim,
-                    density: density
+                    density: density,
+                    sellingPrice3ml: product.sellingPrice3ml,
+                    sellingPrice6ml: product.sellingPrice6ml
                 });
 
             } catch (error) {
@@ -877,26 +890,25 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
         }
 
         // ============================================
-        // ✅ CREATE AUDIT FILE
+        // CREATE AUDIT FILE
         // ============================================
         const { createAuditFile } = require("../../utils/auditHelper");
 
-        // Prepare success data for audit
         const successData = success.map(item => ({
             'Row': item.row || 'N/A',
             'Product Name': item.productName || 'N/A',
             'Density': item.density || 1000,
+            'Selling Price 3ml': item.sellingPrice3ml || 0,
+            'Selling Price 6ml': item.sellingPrice6ml || 0,
             'Status': '✅ Added'
         }));
 
-        // Prepare failed data for audit
         const failedData = errors.map(item => ({
             'Row': item.row || 'N/A',
             'Product Name': item.productName || 'N/A',
             'Error Reason': item.error || 'Unknown error'
         }));
 
-        // Prepare summary
         const summary = {
             uploadDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
             category: 'XP Oil - Products',
@@ -907,7 +919,6 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
             failedCount: errors.length
         };
 
-        // Create audit file
         const auditResult = await createAuditFile('xp', {
             originalData: originalData.length > 0 ? originalData : [{ 'Message': 'No original data available' }],
             successData: successData.length > 0 ? successData : [{ 'Message': 'No successful records' }],
@@ -923,9 +934,6 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
             console.log(`⚠️ Product Audit file creation failed: ${auditResult.error}`);
         }
 
-        // ============================================
-        // LOG
-        // ============================================
         if (success.length > 0) {
             await logSuccess({
                 module: 'XP Inventory',
@@ -1009,7 +1017,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
         const success = [];
         const bulkUploadId = `bulk-${Date.now()}`;
 
-        // Store original data for audit
         const originalData = result.originalData || [];
 
         for (let i = 0; i < result.success.length; i++) {
@@ -1024,7 +1031,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
                     continue;
                 }
 
-                // ✅ FIX: Changed parseInt to parseFloat to support decimals (0.2, 5.2, etc.)
                 if (!quantity || parseFloat(quantity) <= 0) {
                     errors.push({ row: rowNumber, productName, quantity, purchasePrice, error: 'Quantity must be greater than 0' });
                     continue;
@@ -1036,7 +1042,7 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
                 }
 
                 const nameTrim = productName.trim();
-                const qty = parseFloat(quantity);  // ✅ NOW SUPPORTS DECIMALS
+                const qty = parseFloat(quantity);
                 const price = parseFloat(purchasePrice);
 
                 const product = await XPInventory.getProduct(nameTrim);
@@ -1092,7 +1098,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
                     bulkUploadId: bulkUploadId
                 };
 
-                // Check if XPTransactions exists, if not create with productName
                 let xpTransactionDoc = await XPTransactions.findOne({ xpId: product.xpId });
 
                 if (!xpTransactionDoc) {
@@ -1136,7 +1141,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
         // ============================================
         const { createAuditFile } = require("../../utils/auditHelper");
 
-        // Prepare success data for audit
         const successData = success.map(item => ({
             'Row': item.row || 'N/A',
             'Product Name': item.productName || 'N/A',
@@ -1147,7 +1151,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
             'Status': '✅ Added'
         }));
 
-        // Prepare failed data for audit
         const failedData = errors.map(item => ({
             'Row': item.row || 'N/A',
             'Product Name': item.productName || 'N/A',
@@ -1156,7 +1159,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
             'Error Reason': item.error || 'Unknown error'
         }));
 
-        // Prepare summary
         const summary = {
             uploadDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
             category: 'XP Oil',
@@ -1167,7 +1169,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
             failedCount: errors.length
         };
 
-        // Create audit file
         const auditResult = await createAuditFile('xp', {
             originalData: originalData.length > 0 ? originalData : [{ 'Message': 'No original data available' }],
             successData: successData.length > 0 ? successData : [{ 'Message': 'No successful records' }],
@@ -1183,9 +1184,6 @@ router.post("/bulk-upload-inventory", auth, checkInventoryPermission, upload.sin
             console.log(`⚠️ Audit file creation failed: ${auditResult.error}`);
         }
 
-        // ============================================
-        // LOG SUCCESS
-        // ============================================
         if (success.length > 0) {
             await logSuccess({
                 module: 'XP Inventory',
@@ -1279,7 +1277,6 @@ router.get("/download-error-excel/:bulkUploadId", auth, async (req, res) => {
     }
 });
 
-
 // ============================================
 // EXPORT INVENTORY TO EXCEL
 // ============================================
@@ -1292,16 +1289,12 @@ router.get("/export", auth, async (req, res) => {
 
         console.log(`📊 Export XP Inventory - Status: ${status}, Search: ${search}`);
 
-        // ============================================
-        // STEP 1: Build query
-        // ============================================
         let query = {};
 
         if (search && search.trim() !== '') {
             query.productName = { $regex: search.trim(), $options: 'i' };
         }
 
-        // Get all products (no pagination)
         const products = await XPInventory.find(query).lean();
         console.log(`📦 Found ${products.length} products`);
 
@@ -1312,9 +1305,6 @@ router.get("/export", auth, async (req, res) => {
             });
         }
 
-        // ============================================
-        // STEP 2: Filter by status
-        // ============================================
         let filteredProducts = products;
 
         if (status === 'low') {
@@ -1327,31 +1317,17 @@ router.get("/export", auth, async (req, res) => {
 
         console.log(`📊 After status filter: ${filteredProducts.length} products`);
 
-        // ============================================
-        // STEP 3: Get transactions for each product
-        // ============================================
-        const INVOICE_RELATED_REASONS = [
-            'Invoice',
-            'Invoice Return',
-            'Invoice Deletion - Return',
-            'Invoice Edit - Return',
-            'Invoice Edit - New Reduction'
-        ];
-
         const productData = [];
 
         for (const product of filteredProducts) {
-            // Get transactions for this product
             const transactionDoc = await XPTransactions.findOne({ xpId: product.xpId }).lean();
 
             let inTransactions = [];
             if (transactionDoc && transactionDoc.transactions) {
-                // ✅ Only IN transactions, exclude invoice related
                 inTransactions = transactionDoc.transactions.filter(t =>
                     t.transactionType === 'IN' &&
                     !INVOICE_RELATED_REASONS.includes(t.reason)
                 );
-                // Sort by date descending (newest first)
                 inTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             }
 
@@ -1360,7 +1336,6 @@ router.get("/export", auth, async (req, res) => {
             const avgPrice = product.avgPurchasePrice || 0;
             const minStock = product.minStock || 5;
 
-            // Determine status
             let stockStatus = 'Healthy';
             if (totalQuantity === 0) {
                 stockStatus = 'Out of Stock';
@@ -1379,16 +1354,12 @@ router.get("/export", auth, async (req, res) => {
             });
         }
 
-        // Sort by product name
         productData.sort((a, b) => a.product.productName.localeCompare(b.product.productName));
 
-        // ============================================
-        // STEP 4: Prepare Excel Data
-        // ============================================
         const XLSX = require('xlsx');
 
         // ============================================
-        // SHEET 1: Product Summary
+        // SHEET 1: Product Summary - WITH SELLING PRICES
         // ============================================
         const summaryData = productData.map(item => ({
             'Product Name': item.product.productName,
@@ -1396,6 +1367,8 @@ router.get("/export", auth, async (req, res) => {
             'Total Quantity (KG)': Number(item.totalQuantity).toFixed(4),
             'Total Purchase Cost': `₹${Number(item.totalCost).toFixed(2)}`,
             'Avg Purchase Price': `₹${Number(item.avgPrice).toFixed(2)}`,
+            'Selling Price 3ml': `₹${Number(item.product.sellingPrice3ml || 0).toFixed(2)}`,
+            'Selling Price 6ml': `₹${Number(item.product.sellingPrice6ml || 0).toFixed(2)}`,
             'Min Stock': item.product.minStock || 5,
             'Status': item.stockStatus,
             'Density': item.density || 1000
@@ -1407,7 +1380,6 @@ router.get("/export", auth, async (req, res) => {
         const transactionData = [];
 
         for (const item of productData) {
-            // Add a header row for the product
             transactionData.push({
                 'Product': item.product.productName,
                 'Category': 'XP Oil',
@@ -1420,7 +1392,6 @@ router.get("/export", auth, async (req, res) => {
                 'Current Stock': `${Number(item.totalQuantity).toFixed(4)} KG`
             });
 
-            // If no transactions, add a message
             if (item.transactions.length === 0) {
                 transactionData.push({
                     'Product': '',
@@ -1434,7 +1405,6 @@ router.get("/export", auth, async (req, res) => {
                     'Current Stock': ''
                 });
             } else {
-                // Add each transaction
                 for (const txn of item.transactions) {
                     const date = new Date(txn.createdAt).toLocaleDateString('en-IN', {
                         day: '2-digit',
@@ -1460,7 +1430,6 @@ router.get("/export", auth, async (req, res) => {
                 }
             }
 
-            // Add a blank row between products
             transactionData.push({
                 'Product': '',
                 'Category': '',
@@ -1479,12 +1448,13 @@ router.get("/export", auth, async (req, res) => {
         // ============================================
         const wb = XLSX.utils.book_new();
 
-        // Sheet 1: Product Summary
         const ws1 = XLSX.utils.json_to_sheet(summaryData);
         ws1['!cols'] = [
             { wch: 40 },
             { wch: 12 },
             { wch: 18 },
+            { wch: 20 },
+            { wch: 20 },
             { wch: 20 },
             { wch: 20 },
             { wch: 12 },
@@ -1493,7 +1463,6 @@ router.get("/export", auth, async (req, res) => {
         ];
         XLSX.utils.book_append_sheet(wb, ws1, 'Product Summary');
 
-        // Sheet 2: Transaction History
         const ws2 = XLSX.utils.json_to_sheet(transactionData);
         ws2['!cols'] = [
             { wch: 35 },
@@ -1508,9 +1477,6 @@ router.get("/export", auth, async (req, res) => {
         ];
         XLSX.utils.book_append_sheet(wb, ws2, 'Transaction History');
 
-        // ============================================
-        // STEP 6: Send response
-        // ============================================
         const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
 
         const filename = `xp_inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -1530,4 +1496,5 @@ router.get("/export", auth, async (req, res) => {
         });
     }
 });
+
 module.exports = router;

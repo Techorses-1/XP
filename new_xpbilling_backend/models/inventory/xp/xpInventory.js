@@ -34,12 +34,24 @@ const xpInventorySchema = new mongoose.Schema({
         default: 0,
         min: [0, 'Average purchase price cannot be negative']
     },
+    // ========== NEW SELLING PRICES ==========
+    sellingPrice3ml: {
+        type: Number,
+        default: 0,
+        min: [0, 'Selling price cannot be negative']
+    },
+    sellingPrice6ml: {
+        type: Number,
+        default: 0,
+        min: [0, 'Selling price cannot be negative']
+    },
+    // ========================================
     minStock: {
         type: Number,
         default: 5,
         min: [0, 'Min stock cannot be negative']
     },
-    // ========== NEW DENSITY FIELD ==========
+    // ========== DENSITY FIELD ==========
     density: {
         type: Number,
         default: 1000,

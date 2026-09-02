@@ -8,8 +8,6 @@ const Package = require("../models/package");
 const PromoCode = require("../models/promoCode");
 const XPInventory = require("../models/inventory/xp/xpInventory");
 const XPTransactions = require("../models/inventory/xp/xpTransactions");
-const DispenserInventory = require("../models/inventory/dispenser/dispenserInventory");
-const DispenserTransactions = require("../models/inventory/dispenser/dispenserTransactions");
 const BottlesInventory = require("../models/inventory/bottles/bottlesInventory");
 const BottlesTransactions = require("../models/inventory/bottles/bottlesTransactions");
 const User = require("../models/user");
@@ -571,147 +569,20 @@ const returnAlcohol = async (alcoholML, user, transactionReason, notes = '') => 
     };
 };
 
-// ============================================
-// HELPER: Reduce Dispenser Oil
-// ============================================
-const reduceDispenserOil = async (dispenserId, ml, quantity, user, transactionReason, notes = '') => {
-    const inventory = await DispenserInventory.findOne({ dispenserId });
-
-    if (!inventory) {
-        throw new Error(`Dispenser oil not found`);
-    }
-
-    const totalML = ml * quantity;
-    const quantityInKG = totalML / 1000;
-
-    if (inventory.quantity < quantityInKG) {
-        throw new Error(
-            `Insufficient dispenser oil stock. Available: ${inventory.quantity} KG, Required: ${quantityInKG} KG (${totalML} ML)`
-        );
-    }
-
-    const oldQuantity = inventory.quantity;
-    const newQuantity = oldQuantity - quantityInKG;
-
-    inventory.quantity = newQuantity;
-    inventory.updatedBy = {
-        userId: user.userId,
-        userName: user.name,
-        userEmail: user.email
-    };
-
-    await inventory.save();
-
-    const transactionData = {
-        transactionType: 'OUT',
-        quantity: quantityInKG,
-        purchasePrice: inventory.avgPurchasePrice || 0,
-        sellingPrice3ml: inventory.sellingPrice3ml || 0,
-        sellingPrice6ml: inventory.sellingPrice6ml || 0,
-        discount: inventory.discount || 0,
-        previousStock: oldQuantity,
-        newStock: newQuantity,
-        previousTotalQuantityAdded: inventory.totalQuantityAdded,
-        newTotalQuantityAdded: inventory.totalQuantityAdded,
-        previousTotalPurchaseCost: inventory.totalPurchaseCost,
-        newTotalPurchaseCost: inventory.totalPurchaseCost,
-        previousAvgPurchasePrice: inventory.avgPurchasePrice,
-        newAvgPurchasePrice: inventory.avgPurchasePrice,
-        reason: transactionReason || 'Invoice',
-        notes: notes || `Reduced ${totalML} ML (${ml}ml × ${quantity}) for invoice`,
-        performedBy: {
-            userId: user.userId,
-            userName: user.name,
-            userEmail: user.email
-        }
-    };
-
-    await DispenserTransactions.addTransaction(inventory.dispenserId, transactionData);
-
-    return {
-        dispenserId: inventory.dispenserId,
-        productName: inventory.productName,
-        oldQuantity,
-        newQuantity,
-        reducedInKG: quantityInKG,
-        reducedInML: totalML,
-        ml: ml,
-        quantity: quantity
-    };
-};
-
-// ============================================
-// HELPER: Return Dispenser Oil (IN)
-// ============================================
-const returnDispenserOil = async (dispenserId, ml, quantity, user, transactionReason, notes = '') => {
-    const inventory = await DispenserInventory.findOne({ dispenserId });
-
-    if (!inventory) {
-        throw new Error(`Dispenser oil not found`);
-    }
-
-    const totalML = ml * quantity;
-    const quantityInKG = totalML / 1000;
-
-    const oldQuantity = inventory.quantity;
-    const newQuantity = oldQuantity + quantityInKG;
-
-    inventory.quantity = newQuantity;
-    inventory.updatedBy = {
-        userId: user.userId,
-        userName: user.name,
-        userEmail: user.email
-    };
-
-    await inventory.save();
-
-    const transactionData = {
-        transactionType: 'IN',
-        quantity: quantityInKG,
-        purchasePrice: inventory.avgPurchasePrice || 0,
-        sellingPrice3ml: inventory.sellingPrice3ml || 0,
-        sellingPrice6ml: inventory.sellingPrice6ml || 0,
-        discount: inventory.discount || 0,
-        previousStock: oldQuantity,
-        newStock: newQuantity,
-        previousTotalQuantityAdded: inventory.totalQuantityAdded,
-        newTotalQuantityAdded: inventory.totalQuantityAdded,
-        previousTotalPurchaseCost: inventory.totalPurchaseCost,
-        newTotalPurchaseCost: inventory.totalPurchaseCost,
-        previousAvgPurchasePrice: inventory.avgPurchasePrice,
-        newAvgPurchasePrice: inventory.avgPurchasePrice,
-        reason: transactionReason || 'Invoice Return',
-        notes: notes || `Returned ${totalML} ML (${ml}ml × ${quantity}) for invoice`,
-        performedBy: {
-            userId: user.userId,
-            userName: user.name,
-            userEmail: user.email
-        }
-    };
-
-    await DispenserTransactions.addTransaction(inventory.dispenserId, transactionData);
-
-    return {
-        dispenserId: inventory.dispenserId,
-        productName: inventory.productName,
-        oldQuantity,
-        newQuantity,
-        returnedInKG: quantityInKG,
-        returnedInML: totalML,
-        ml: ml,
-        quantity: quantity
-    };
-};
-
-// ============================================
-// CREATE INVOICE - WITH EDITABLE DISPENSER PRICE
-// ============================================
-
 router.post("/create", auth, checkInvoicePermission, async (req, res) => {
     console.log("\n========== 🚀 INVOICE CREATION STARTED ==========");
     console.log("📝 Request Body:", JSON.stringify(req.body, null, 2));
 
     try {
+        // ============================================
+        // ✅ GENERATE INVOICE NUMBER AT THE START
+        // ============================================
+        const now = new Date();
+        const year = now.getFullYear();
+        const random = Math.floor(1000 + Math.random() * 9000);
+        const invoiceNumber = `INV${year}${random}`;
+        console.log("📄 Generated Invoice Number:", invoiceNumber);
+
         const {
             customerId,
             workshopId,
@@ -1104,7 +975,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         }
 
         // ============================================
-        // 4. VALIDATE DISPENSER ITEMS - WITH UNIT PRICE
+        // 4. VALIDATE DISPENSER ITEMS - WITH XP ID
         // ============================================
         console.log("\n🔍 Step 4: Validating Dispenser Items...");
         let dispenserItemsData = [];
@@ -1115,10 +986,10 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         if (dispenserItems && dispenserItems.length > 0) {
             console.log("  💧 Dispenser Items Count:", dispenserItems.length);
             for (const item of dispenserItems) {
-                const { dispenserId, ml, quantity, unitPrice, discount } = item;
-                console.log(`  📦 Item: ${dispenserId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
+                const { xpId, ml, quantity, unitPrice, discount } = item;
+                console.log(`  📦 Item: XP ID: ${xpId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
 
-                if (!dispenserId || !ml || !quantity) {
+                if (!xpId || !ml || !quantity) {
                     console.log("❌ Missing dispenser item fields");
                     await logFailed({
                         module: 'Invoice',
@@ -1127,10 +998,10 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: 'Dispenser ID, ML, and quantity are required for each dispenser item'
+                        description: 'XP ID, ML, and quantity are required for each dispenser item'
                     });
                     return res.status(400).json({
-                        message: "Dispenser ID, ML, and quantity are required for each dispenser item"
+                        message: "XP ID, ML, and quantity are required for each dispenser item"
                     });
                 }
 
@@ -1166,9 +1037,10 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     });
                 }
 
-                const dispenserOil = await DispenserInventory.findOne({ dispenserId });
-                if (!dispenserOil) {
-                    console.log("❌ Dispenser oil not found:", dispenserId);
+                // ✅ CHANGED: Find XPInventory using xpId (not dispenserId)
+                const xpOil = await XPInventory.findOne({ xpId });
+                if (!xpOil) {
+                    console.log("❌ XP Oil not found:", xpId);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1176,21 +1048,21 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: 'Dispenser oil not found'
+                        description: `XP Oil not found: ${xpId}`
                     });
                     return res.status(404).json({
-                        message: "Dispenser oil not found"
+                        message: `XP Oil not found: ${xpId}`
                     });
                 }
-                console.log(`  ✅ Dispenser oil found: ${dispenserOil.productName}`);
+                console.log(`  ✅ XP Oil found: ${xpOil.productName}`);
 
                 const totalML = ml * quantity;
                 const requiredKG = totalML / 1000;
                 console.log(`  📊 Total ML: ${totalML}ml | Required KG: ${requiredKG}KG`);
-                console.log(`  📦 Current Stock: ${dispenserOil.quantity}KG`);
+                console.log(`  📦 Current Stock: ${xpOil.quantity}KG`);
 
-                if (dispenserOil.quantity < requiredKG) {
-                    console.log(`❌ Insufficient dispenser oil stock. Available: ${dispenserOil.quantity}KG, Required: ${requiredKG}KG`);
+                if (xpOil.quantity < requiredKG) {
+                    console.log(`❌ Insufficient stock. Available: ${xpOil.quantity}KG, Required: ${requiredKG}KG`);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1198,10 +1070,10 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: `Insufficient dispenser oil stock. Available: ${dispenserOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
+                        description: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                     return res.status(400).json({
-                        message: `Insufficient dispenser oil stock. Available: ${dispenserOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
+                        message: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                 }
                 console.log(`  ✅ Stock sufficient`);
@@ -1229,12 +1101,12 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
-                // ✅ IMPORTANT: Use unitPrice from frontend, fallback to DB price
-                const dbPrice = ml === 3 ? dispenserOil.sellingPrice3ml : dispenserOil.sellingPrice6ml;
+                // ✅ Get selling prices from XPInventory
+                const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
-                
+
                 // ✅ Calculate using existing schema fields
-                const itemDiscountPercent = discount !== undefined ? discount : dispenserOil.discount || 0;
+                const itemDiscountPercent = discount !== undefined ? discount : 0;
                 const originalTotal = baseUnitPrice * quantity;
                 const discountAmount = (originalTotal * itemDiscountPercent) / 100;
                 const finalPrice = originalTotal - discountAmount;
@@ -1246,25 +1118,36 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 console.log(`  💰 Final Price: ₹${finalPrice}`);
 
                 dispenserItemsData.push({
-                    dispenserId: dispenserOil.dispenserId,
-                    productName: dispenserOil.productName,
+                    // ✅ CHANGED: Store xpId (not dispenserId)
+                    xpId: xpOil.xpId,
+                    productName: xpOil.productName,
                     ml: ml,
                     quantity: quantity,
                     unitPrice: baseUnitPrice,
-                    sellingPrice3ml: dispenserOil.sellingPrice3ml || 0,
-                    sellingPrice6ml: dispenserOil.sellingPrice6ml || 0,
+                    sellingPrice3ml: xpOil.sellingPrice3ml || 0,
+                    sellingPrice6ml: xpOil.sellingPrice6ml || 0,
                     discount: itemDiscountPercent,
                     discountAmount: discountAmount,
                     originalPrice: originalTotal,
-                    finalPrice: finalPrice,  // ✅ This stores the final total
+                    finalPrice: finalPrice,
                     totalML: totalML
                 });
 
                 dispenserSubtotal += finalPrice;
                 totalDispenserDiscount += discountAmount;
                 hasDispenser = true;
+
+                // ✅ REDUCE XP Inventory - USING invoiceNumber (defined at the start)
+                await reduceXPOil(
+                    xpOil.xpId,
+                    totalML, // quantity in ml
+                    req.user,
+                    'Invoice - Dispenser',
+                    `Reduced for invoice ${invoiceNumber} (${xpOil.productName}: ${ml}ml × ${quantity})`
+                );
+
             }
-            console.log("  ✅ All dispenser items validated");
+            console.log("  ✅ All dispenser items validated and inventory reduced");
         } else {
             console.log("  ℹ️ No dispenser items provided");
         }
@@ -1485,9 +1368,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         }
 
         // ============================================
-        // 11. REDUCE INVENTORIES
+        // 11. REDUCE PACKAGE INVENTORIES (XP Oils, Alcohol, Bottles)
         // ============================================
-        console.log("\n🔍 Step 11: Reducing Inventories...");
+        console.log("\n🔍 Step 11: Reducing Package Inventories...");
         const inventoryUpdates = [];
 
         if (hasPackage) {
@@ -1520,33 +1403,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             );
             inventoryUpdates.push({ type: 'Bottles - Package', details: bottleResult });
             console.log(`  ✅ Bottles reduced: ${mlSize}ml`);
-        }
-
-        if (hasDispenser && dispenserItemsData.length > 0) {
-            console.log("  💧 Reducing Dispenser Inventories...");
-            for (const item of dispenserItemsData) {
-                const dispenserResult = await reduceDispenserOil(
-                    item.dispenserId,
-                    item.ml,
-                    item.quantity,
-                    req.user,
-                    'Invoice - Dispenser',
-                    `Reduced for invoice ${invoice.invoiceNumber} (${item.productName}: ${item.ml}ml × ${item.quantity})`
-                );
-                inventoryUpdates.push({ type: 'Dispenser Oil', details: dispenserResult });
-                console.log(`  ✅ Dispenser Oil reduced: ${item.productName}`);
-
-                const mlSize = item.ml.toString();
-                const bottleResult = await reduceBottlesInventory(
-                    mlSize,
-                    item.quantity,
-                    req.user,
-                    'Invoice - Dispenser Bottles',
-                    `Reduced for invoice ${invoice.invoiceNumber} (${item.ml}ml Bottles × ${item.quantity})`
-                );
-                inventoryUpdates.push({ type: 'Bottles - Dispenser', details: bottleResult });
-                console.log(`  ✅ Bottles reduced: ${item.ml}ml × ${item.quantity}`);
-            }
         }
 
         // ============================================
@@ -1939,9 +1795,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         }
 
         // ============================================
-        // 4. HANDLE DISPENSER CHANGES - WITH UNIT PRICE
+        // 4. HANDLE DISPENSER CHANGES - UPDATED TO USE XP ID
         // ============================================
-        console.log("\n🔍 Step 4: Handling Dispenser Changes...");
+        console.log("\n🔍 Step 4: Handling Dispenser Changes (using XP ID)...");
         let newDispenserItems = [];
         let hasDispenser = false;
         let dispenserSubtotal = 0;
@@ -1950,10 +1806,12 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         if (dispenserItems && dispenserItems.length > 0) {
             console.log("  💧 New Dispenser Items:", dispenserItems.length);
             for (const item of dispenserItems) {
-                const { dispenserId, ml, quantity, unitPrice, discount } = item;
-                console.log(`  📦 Item: ${dispenserId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
+                // ✅ CHANGED: Use xpId instead of dispenserId
+                const { xpId, ml, quantity, unitPrice, discount } = item;
+                console.log(`  📦 Item: XP ID: ${xpId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
 
-                if (!dispenserId || !ml || !quantity) {
+                // ✅ CHANGED: Validate xpId instead of dispenserId
+                if (!xpId || !ml || !quantity) {
                     console.log("❌ Missing dispenser item fields");
                     await logFailed({
                         module: 'Invoice',
@@ -1962,10 +1820,10 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: 'Dispenser ID, ML, and quantity are required for each dispenser item'
+                        description: 'XP ID, ML, and quantity are required for each dispenser item'
                     });
                     return res.status(400).json({
-                        message: "Dispenser ID, ML, and quantity are required for each dispenser item"
+                        message: "XP ID, ML, and quantity are required for each dispenser item"
                     });
                 }
 
@@ -2001,9 +1859,10 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     });
                 }
 
-                const dispenserOil = await DispenserInventory.findOne({ dispenserId });
-                if (!dispenserOil) {
-                    console.log("❌ Dispenser oil not found:", dispenserId);
+                // ✅ CHANGED: Find XPInventory using xpId (not dispenserId)
+                const xpOil = await XPInventory.findOne({ xpId });
+                if (!xpOil) {
+                    console.log("❌ XP Oil not found:", xpId);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -2011,21 +1870,21 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: 'Dispenser oil not found'
+                        description: `XP Oil not found: ${xpId}`
                     });
                     return res.status(404).json({
-                        message: "Dispenser oil not found"
+                        message: `XP Oil not found: ${xpId}`
                     });
                 }
-                console.log(`  ✅ Dispenser oil found: ${dispenserOil.productName}`);
+                console.log(`  ✅ XP Oil found: ${xpOil.productName}`);
 
                 const totalML = ml * quantity;
                 const requiredKG = totalML / 1000;
                 console.log(`  📊 Total ML: ${totalML}ml | Required KG: ${requiredKG}KG`);
-                console.log(`  📦 Current Stock: ${dispenserOil.quantity}KG`);
+                console.log(`  📦 Current Stock: ${xpOil.quantity}KG`);
 
-                if (dispenserOil.quantity < requiredKG) {
-                    console.log(`❌ Insufficient dispenser oil stock. Available: ${dispenserOil.quantity}KG, Required: ${requiredKG}KG`);
+                if (xpOil.quantity < requiredKG) {
+                    console.log(`❌ Insufficient stock. Available: ${xpOil.quantity}KG, Required: ${requiredKG}KG`);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -2033,14 +1892,15 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: `Insufficient dispenser oil stock. Available: ${dispenserOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
+                        description: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                     return res.status(400).json({
-                        message: `Insufficient dispenser oil stock. Available: ${dispenserOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
+                        message: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                 }
                 console.log(`  ✅ Stock sufficient`);
 
+                // Check Bottles Inventory for dispenser
                 const mlSize = ml.toString();
                 const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
@@ -2063,12 +1923,12 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
-                // ✅ IMPORTANT: Use unitPrice from frontend, fallback to DB price
-                const dbPrice = ml === 3 ? dispenserOil.sellingPrice3ml : dispenserOil.sellingPrice6ml;
+                // ✅ CHANGED: Get selling prices from XPInventory
+                const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
-                
-                // ✅ Calculate using existing schema fields
-                const itemDiscountPercent = discount !== undefined ? discount : dispenserOil.discount || 0;
+
+                // Calculate using existing schema fields
+                const itemDiscountPercent = discount !== undefined ? discount : 0;
                 const originalTotal = baseUnitPrice * quantity;
                 const discountAmount = (originalTotal * itemDiscountPercent) / 100;
                 const finalPrice = originalTotal - discountAmount;
@@ -2079,18 +1939,19 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 console.log(`  💰 Discount: ${itemDiscountPercent}% (₹${discountAmount})`);
                 console.log(`  💰 Final Price: ₹${finalPrice}`);
 
+                // ✅ CHANGED: Store xpId (not dispenserId)
                 newDispenserItems.push({
-                    dispenserId: dispenserOil.dispenserId,
-                    productName: dispenserOil.productName,
+                    xpId: xpOil.xpId,                    // ✅ CHANGED
+                    productName: xpOil.productName,
                     ml: ml,
                     quantity: quantity,
-                     unitPrice: baseUnitPrice,
-                    sellingPrice3ml: dispenserOil.sellingPrice3ml || 0,
-                    sellingPrice6ml: dispenserOil.sellingPrice6ml || 0,
+                    unitPrice: baseUnitPrice,
+                    sellingPrice3ml: xpOil.sellingPrice3ml || 0,
+                    sellingPrice6ml: xpOil.sellingPrice6ml || 0,
                     discount: itemDiscountPercent,
                     discountAmount: discountAmount,
                     originalPrice: originalTotal,
-                    finalPrice: finalPrice,  // ✅ This stores the final total
+                    finalPrice: finalPrice,
                     totalML: totalML
                 });
 
@@ -2216,19 +2077,21 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             console.log("  📦 New Package added - Reducing stock...");
         }
 
-        // 5b. Handle Dispenser Changes
-        console.log("\n  💧 Handling Dispenser Changes...");
+        // 5b. Handle Dispenser Changes - UPDATED TO USE XP ID
+        console.log("\n  💧 Handling Dispenser Changes (using XP ID)...");
         const oldDispenserItems = originalInvoice.dispenserItems || [];
         const newDispenserMap = new Map();
         const oldDispenserMap = new Map();
 
+        // ✅ CHANGED: Use xpId for keys
         for (const item of newDispenserItems) {
-            const key = `${item.dispenserId}-${item.ml}`;
+            const key = `${item.xpId}-${item.ml}`;
             newDispenserMap.set(key, item);
         }
 
         for (const item of oldDispenserItems) {
-            const key = `${item.dispenserId}-${item.ml}`;
+            // ✅ CHANGED: Use xpId for keys (old items should have xpId now)
+            const key = `${item.xpId}-${item.ml}`;
             oldDispenserMap.set(key, item);
         }
 
@@ -2237,16 +2100,16 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         for (const [key, oldItem] of oldDispenserMap) {
             if (!newDispenserMap.has(key)) {
                 console.log(`  🔄 Dispenser REMOVED: ${oldItem.productName}`);
-                await returnDispenserOil(
-                    oldItem.dispenserId,
-                    oldItem.ml,
-                    oldItem.quantity,
+                // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
+                await returnXPOil(
+                    oldItem.xpId,
+                    oldItem.totalML || (oldItem.ml * oldItem.quantity),
                     req.user,
                     'Invoice Edit - Return',
                     `Returned for invoice ${invoiceNumber} (Dispenser removed: ${oldItem.productName})`
                 );
-                inventoryChanges.push({ type: 'Dispenser Returned (Removed)', details: oldItem });
-                console.log(`  ✅ Dispenser returned: ${oldItem.productName}`);
+                inventoryChanges.push({ type: 'XP Oil Returned (Dispenser Removed)', details: oldItem });
+                console.log(`  ✅ XP Oil returned: ${oldItem.productName}`);
 
                 await returnBottlesInventory(
                     oldItem.ml.toString(),
@@ -2263,23 +2126,23 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         for (const [key, newItem] of newDispenserMap) {
             const oldItem = oldDispenserMap.get(key);
             if (oldItem) {
-                // ✅ Check if unitPrice, quantity or discount changed
-                if (oldItem.quantity !== newItem.quantity || 
-                    oldItem.discount !== newItem.discount || 
+                // Check if unitPrice, quantity or discount changed
+                if (oldItem.quantity !== newItem.quantity ||
+                    oldItem.discount !== newItem.discount ||
                     oldItem.unitPrice !== newItem.unitPrice) {
-                    
+
                     console.log(`  🔄 Dispenser CHANGED: ${oldItem.productName} | Qty: ${oldItem.quantity}→${newItem.quantity} | Unit Price: ${oldItem.unitPrice}→${newItem.unitPrice} | Discount: ${oldItem.discount}%→${newItem.discount}%`);
 
-                    await returnDispenserOil(
-                        oldItem.dispenserId,
-                        oldItem.ml,
-                        oldItem.quantity,
+                    // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
+                    await returnXPOil(
+                        oldItem.xpId,
+                        oldItem.totalML || (oldItem.ml * oldItem.quantity),
                         req.user,
                         'Invoice Edit - Return',
                         `Returned for invoice ${invoiceNumber} (Dispenser changed: ${oldItem.productName} | Old Qty: ${oldItem.quantity})`
                     );
-                    inventoryChanges.push({ type: 'Dispenser Returned (Changed)', details: oldItem });
-                    console.log(`  ✅ Old dispenser returned`);
+                    inventoryChanges.push({ type: 'XP Oil Returned (Dispenser Changed)', details: oldItem });
+                    console.log(`  ✅ Old XP Oil returned`);
 
                     await returnBottlesInventory(
                         oldItem.ml.toString(),
@@ -2291,16 +2154,16 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     inventoryChanges.push({ type: 'Bottles Returned (Changed)', details: oldItem });
                     console.log(`  ✅ Old bottles returned`);
 
-                    await reduceDispenserOil(
-                        newItem.dispenserId,
-                        newItem.ml,
-                        newItem.quantity,
+                    // ✅ CHANGED: Use reduceXPOil instead of reduceDispenserOil
+                    await reduceXPOil(
+                        newItem.xpId,
+                        newItem.totalML || (newItem.ml * newItem.quantity),
                         req.user,
                         'Invoice Edit - New Reduction',
                         `Reduced for invoice ${invoiceNumber} (New dispenser: ${newItem.productName} | Qty: ${newItem.quantity})`
                     );
-                    inventoryChanges.push({ type: 'Dispenser Reduced (New)', details: newItem });
-                    console.log(`  ✅ New dispenser reduced`);
+                    inventoryChanges.push({ type: 'XP Oil Reduced (Dispenser New)', details: newItem });
+                    console.log(`  ✅ New XP Oil reduced`);
 
                     await reduceBottlesInventory(
                         newItem.ml.toString(),
@@ -2316,16 +2179,16 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 }
             } else {
                 console.log(`  ➕ New dispenser ADDED: ${newItem.productName}`);
-                await reduceDispenserOil(
-                    newItem.dispenserId,
-                    newItem.ml,
-                    newItem.quantity,
+                // ✅ CHANGED: Use reduceXPOil instead of reduceDispenserOil
+                await reduceXPOil(
+                    newItem.xpId,
+                    newItem.totalML || (newItem.ml * newItem.quantity),
                     req.user,
                     'Invoice Edit - New Reduction',
                     `Reduced for invoice ${invoiceNumber} (New dispenser added: ${newItem.productName})`
                 );
-                inventoryChanges.push({ type: 'Dispenser Reduced (Added)', details: newItem });
-                console.log(`  ✅ New dispenser reduced`);
+                inventoryChanges.push({ type: 'XP Oil Reduced (Dispenser Added)', details: newItem });
+                console.log(`  ✅ New XP Oil reduced`);
 
                 await reduceBottlesInventory(
                     newItem.ml.toString(),
@@ -3193,7 +3056,7 @@ router.get("/:invoiceId", auth, async (req, res) => {
 });
 
 // ============================================
-// DELETE INVOICE - With Inventory Return & Audit - WITH MULTIPLE XP OILS
+// DELETE INVOICE - With Inventory Return & Audit - UPDATED TO USE XP ID
 // ============================================
 router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, res) => {
     console.log("\n========== 🗑️ INVOICE DELETION STARTED ==========");
@@ -3317,23 +3180,24 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
             console.log("  ℹ️ No package stock to return");
         }
 
-        // 2b. Return Dispenser Stock
+        // 2b. Return Dispenser Stock - UPDATED TO USE XP ID
         if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
-            console.log("\n  💧 Returning Dispenser Stock...");
+            console.log("\n  💧 Returning Dispenser Stock (using XP ID)...");
             for (const item of invoice.dispenserItems) {
                 console.log(`    Item: ${item.productName}`);
                 console.log(`      ML: ${item.ml}ml | Qty: ${item.quantity} | Total ML: ${item.totalML}ml`);
 
-                const dispenserResult = await returnDispenserOil(
-                    item.dispenserId,
-                    item.ml,
-                    item.quantity,
+                // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
+                // ✅ CHANGED: Use xpId instead of dispenserId
+                const xpResult = await returnXPOil(
+                    item.xpId,  // ✅ CHANGED: Use xpId
+                    item.totalML || (item.ml * item.quantity),
                     req.user,
                     'Invoice Deletion - Return',
                     `Returned for invoice ${invoiceNumber} (Invoice deleted)`
                 );
-                inventoryReturned.dispenser += item.totalML;
-                console.log(`    ✅ Dispenser oil returned: ${item.totalML}ml`);
+                inventoryReturned.dispenser += item.totalML || (item.ml * item.quantity);
+                console.log(`    ✅ XP Oil returned: ${item.totalML || (item.ml * item.quantity)}ml (${item.productName})`);
 
                 const bottleResult = await returnBottlesInventory(
                     item.ml.toString(),

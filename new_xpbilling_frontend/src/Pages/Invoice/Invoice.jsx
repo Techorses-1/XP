@@ -504,6 +504,7 @@ const Invoice = () => {
     const [workshops, setWorkshops] = useState([]);
     const [packages, setPackages] = useState([]);
     const [xpOils, setXpOils] = useState([]);
+    // ✅ KEPT: dispenserOils but populated from XP oils
     const [dispenserOils, setDispenserOils] = useState([]);
     const [promoCodes, setPromoCodes] = useState([]);
 
@@ -628,31 +629,27 @@ const Invoice = () => {
 
     const fetchXPOils = async () => {
         try {
+            console.log("🔍 FETCHING XP OILS...");
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/xp/get-all`,
+                `${import.meta.env.VITE_API_URL}/xp/get-all?limit=1000&page=1`,
                 { credentials: 'include' }
             );
             if (!response.ok) throw new Error('Failed to fetch XP oils');
             const data = await response.json();
-            setXpOils(data.products || []);
-        } catch (error) {
-            console.error("Error fetching XP oils:", error);
-            toast.error("Failed to fetch XP oils");
-        }
-    };
+            console.log("📦 RAW DATA FROM BACKEND:", data);
 
-    const fetchDispenserOils = async () => {
-        try {
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/dispenser/get-all`,
-                { credentials: 'include' }
-            );
-            if (!response.ok) throw new Error('Failed to fetch dispenser oils');
-            const data = await response.json();
-            setDispenserOils(data.products || []);
+            const oils = data.products || [];
+            console.log("✅ TOTAL OILS RECEIVED:", oils.length);
+            console.log("📋 OIL NAMES:", oils.map(o => o.productName));
+            console.log("📋 OIL IDs:", oils.map(o => o.xpId));
+
+            setXpOils(oils);
+            // ✅ SHOW ALL XP OILS - NO FILTER
+            setDispenserOils(oils);
+            console.log("✅ DISPENSER OILS SET:", oils.length);
         } catch (error) {
-            console.error("Error fetching dispenser oils:", error);
-            toast.error("Failed to fetch dispenser oils");
+            console.error("❌ Error fetching XP oils:", error);
+            toast.error("Failed to fetch XP oils");
         }
     };
 
@@ -675,7 +672,6 @@ const Invoice = () => {
         fetchCustomers();
         fetchPackages();
         fetchXPOils();
-        fetchDispenserOils();
         fetchPromoCodes();
     }, []);
 
@@ -1071,7 +1067,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE ADD DISPENSER ITEM - WITH UNIT PRICE
+    // ✅ HANDLE ADD DISPENSER ITEM - UPDATED TO USE XP ID
     // ============================================
     const handleAddDispenser = () => {
         if (!dispenserSelect) {
@@ -1093,21 +1089,23 @@ const Invoice = () => {
         const qty = parseInt(dispenserQty);
         const totalML = ml * qty;
 
+        // ✅ CHANGED: Use xpId instead of dispenserId
         const exists = dispenserItems.some(
-            item => item.dispenserId === dispenserSelect.value && item.ml === ml
+            item => item.xpId === dispenserSelect.value && item.ml === ml
         );
 
         if (exists) {
-            toast.error("This dispenser oil with same ML is already added");
+            toast.error("This oil with same ML is already added");
             return;
         }
 
+        // ✅ CHANGED: Get selling prices from XP oil data
         const defaultUnitPrice = ml === 3 ? dispenserSelect.data?.sellingPrice3ml : dispenserSelect.data?.sellingPrice6ml;
 
         setDispenserItems([
             ...dispenserItems,
             {
-                dispenserId: dispenserSelect.value,
+                xpId: dispenserSelect.value,  // ✅ CHANGED: Store xpId
                 productName: dispenserSelect.label,
                 ml: ml,
                 quantity: qty,
@@ -1115,7 +1113,7 @@ const Invoice = () => {
                 unitPrice: defaultUnitPrice || 0,
                 sellingPrice3ml: dispenserSelect.data?.sellingPrice3ml || 0,
                 sellingPrice6ml: dispenserSelect.data?.sellingPrice6ml || 0,
-                discount: dispenserSelect.data?.discount || 0
+                discount: 0  // ✅ Always 0 by default
             }
         ]);
 
@@ -1334,7 +1332,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE CREATE INVOICE
+    // HANDLE CREATE INVOICE - UPDATED PAYLOAD
     // ============================================
     const handleCreateInvoice = async () => {
         try {
@@ -1369,8 +1367,9 @@ const Invoice = () => {
                     ml: item.ml
                 })),
                 packageDiscount: packageDiscountInput || 0,
+                // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
-                    dispenserId: item.dispenserId,
+                    xpId: item.xpId,  // ✅ CHANGED
                     ml: item.ml,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice || 0,
@@ -1422,7 +1421,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE UPDATE INVOICE
+    // HANDLE UPDATE INVOICE - UPDATED PAYLOAD
     // ============================================
     const handleUpdateInvoice = async () => {
         try {
@@ -1460,8 +1459,9 @@ const Invoice = () => {
                     ml: item.ml
                 })),
                 packageDiscount: packageDiscountInput || 0,
+                // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
-                    dispenserId: item.dispenserId,
+                    xpId: item.xpId,  // ✅ CHANGED
                     ml: item.ml,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice || 0,
@@ -1642,7 +1642,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE EDIT INVOICE - Load data into form
+    // HANDLE EDIT INVOICE - Load data into form - UPDATED
     // ============================================
     const handleEditInvoice = async (invoiceId) => {
         try {
@@ -1740,9 +1740,10 @@ const Invoice = () => {
                 }
             }
 
+            // ✅ UPDATED: Load dispenser items with xpId
             if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
                 const items = invoice.dispenserItems.map(item => ({
-                    dispenserId: item.dispenserId,
+                    xpId: item.xpId,  // ✅ CHANGED: Use xpId
                     productName: item.productName,
                     ml: item.ml,
                     quantity: item.quantity,
@@ -2061,7 +2062,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // OPTION FORMATTERS
+    // OPTION FORMATTERS - UPDATED DISPENSER OPTIONS
     // ============================================
     const customerOptions = customers.map(c => ({
         value: c.customerId,
@@ -2081,11 +2082,20 @@ const Invoice = () => {
         data: o
     }));
 
-    const dispenserOptions = dispenserOils.map(o => ({
-        value: o.dispenserId,
-        label: `${o.productName}`,
-        data: o
-    }));
+    // ✅ UPDATED: Use dispenserOils populated from XP oils - SHOW ALL OILS
+    console.log("🔍 DISPENSER OPTIONS - dispenserOils length:", dispenserOils.length);
+    console.log("📋 dispenserOils data:", dispenserOils);
+
+    const dispenserOptions = dispenserOils.map(o => {
+        console.log(`📦 Mapping oil: ${o.productName} | xpId: ${o.xpId}`);
+        return {
+            value: o.xpId,
+            label: `${o.productName} ${o.sellingPrice3ml > 0 ? `(3ml: ₹${o.sellingPrice3ml})` : ''} ${o.sellingPrice6ml > 0 ? `(6ml: ₹${o.sellingPrice6ml})` : ''}`,
+            data: o
+        };
+    });
+
+    console.log("✅ FINAL DISPENSER OPTIONS:", dispenserOptions);
 
     const promoOptions = promoCodes.map(p => ({
         value: p.promoId,
@@ -2446,7 +2456,7 @@ const Invoice = () => {
                             )}
                         </div>
 
-                        {/* SECTION 3: DISPENSER ITEMS - WITH UNIT PRICE */}
+                        {/* SECTION 3: DISPENSER ITEMS - UPDATED TO USE XP ID */}
                         <div className="inv-section inv-dispenser-section">
                             <div className="inv-section-header-with-actions">
                                 <h3 className="inv-section-title">
@@ -2465,15 +2475,15 @@ const Invoice = () => {
 
                             <div className="inv-form-row inv-form-row-dispenser">
                                 <div className="inv-form-field">
-                                    <label>Select Dispenser Oil</label>
+                                    <label>Select Oil</label>
                                     <Select
                                         options={dispenserOptions}
                                         value={dispenserSelect}
                                         onChange={setDispenserSelect}
-                                        placeholder="Select dispenser oil..."
+                                        placeholder="Select oil..."
                                         isClearable
                                         styles={customSelectStyles}
-                                        noOptionsMessage={() => "No dispenser oils available"}
+                                        noOptionsMessage={() => "No oils available"}
                                     />
                                 </div>
                                 <div className="inv-form-field inv-form-field-narrow">
@@ -2512,7 +2522,7 @@ const Invoice = () => {
 
                             {dispenserItems.length > 0 && (
                                 <div className="inv-dispenser-list">
-                                    <h4>Added Dispenser Items</h4>
+                                    <h4>Added Items</h4>
                                     <div className="inv-dispenser-table-wrap">
                                         <table className="inv-dispenser-table">
                                             <thead>

@@ -8,7 +8,8 @@ import {
   FaChevronLeft, FaChevronRight as FaChevronRightIcon,
   FaUser, FaCalendarAlt, FaClock, FaMoneyBillWave,
   FaTag, FaInfoCircle, FaTrashAlt, FaToggleOn, FaToggleOff,
-  FaWeightHanging, FaFlask, FaList, FaEye, FaFilter
+  FaWeightHanging, FaFlask, FaList, FaEye, FaFilter,
+  FaMoneyBillWave as FaPriceTag
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../../Components/Navbar/Navbar";
@@ -18,7 +19,7 @@ import * as XLSX from 'xlsx';
 import Select from 'react-select';
 
 // ============================================
-// ADD PRODUCT MODAL
+// ADD PRODUCT MODAL - UPDATED WITH SELLING PRICES
 // ============================================
 const AddProductModal = ({
   show, onClose, newProduct, setNewProduct,
@@ -48,6 +49,34 @@ const AddProductModal = ({
                 placeholder="Enter product name"
                 autoComplete="off"
               />
+            </div>
+          </div>
+          <div className="xp-form-row">
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (3ml) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newProduct.sellingPrice3ml || ''}
+                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice3ml: e.target.value })}
+                placeholder="Enter selling price for 3ml"
+                autoComplete="off"
+              />
+              <small className="xp-field-hint">Price for 3ml dispenser (optional)</small>
+            </div>
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (6ml) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newProduct.sellingPrice6ml || ''}
+                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice6ml: e.target.value })}
+                placeholder="Enter selling price for 6ml"
+                autoComplete="off"
+              />
+              <small className="xp-field-hint">Price for 6ml dispenser (optional)</small>
             </div>
           </div>
         </div>
@@ -248,6 +277,12 @@ const AddStockModal = ({
             <div className="xp-current-stock-info">
               <span>Current Stock: <strong>{selectedProduct.quantity?.toFixed(2)} KG</strong></span>
               <span>Avg Price: <strong>₹{selectedProduct.avgPurchasePrice?.toFixed(2) || '0.00'}/KG</strong></span>
+              {selectedProduct.sellingPrice3ml > 0 && (
+                <span>Sell Price 3ml: <strong>₹{selectedProduct.sellingPrice3ml}</strong></span>
+              )}
+              {selectedProduct.sellingPrice6ml > 0 && (
+                <span>Sell Price 6ml: <strong>₹{selectedProduct.sellingPrice6ml}</strong></span>
+              )}
             </div>
           )}
 
@@ -312,7 +347,7 @@ const AddStockModal = ({
 };
 
 // ============================================
-// EDIT PRODUCT MODAL
+// EDIT PRODUCT MODAL - UPDATED WITH SELLING PRICES
 // ============================================
 const EditProductModal = ({
   show, onClose, editData, setEditData,
@@ -344,6 +379,32 @@ const EditProductModal = ({
               />
             </div>
           </div>
+          <div className="xp-form-row">
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (3ml)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.sellingPrice3ml || ''}
+                onChange={(e) => setEditData({ ...editData, sellingPrice3ml: e.target.value })}
+                placeholder="Enter selling price for 3ml"
+                autoComplete="off"
+              />
+            </div>
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (6ml)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.sellingPrice6ml || ''}
+                onChange={(e) => setEditData({ ...editData, sellingPrice6ml: e.target.value })}
+                placeholder="Enter selling price for 6ml"
+                autoComplete="off"
+              />
+            </div>
+          </div>
         </div>
         <div className="xp-modal-footer">
           <button className="xp-btn-cancel" onClick={onClose}>
@@ -363,7 +424,7 @@ const EditProductModal = ({
 };
 
 // ============================================
-// BULK UPLOAD MODAL
+// BULK UPLOAD MODAL - UPDATED WITH SELLING PRICES
 // ============================================
 const BulkUploadModal = ({
   show, onClose, fileInputRef, selectedFile, onFileChange,
@@ -404,7 +465,7 @@ const BulkUploadModal = ({
 
             <p className="xp-upload-hint">
               {uploadType === 'products'
-                ? 'File should have columns: Product Name'
+                ? 'File should have columns: Product Name, Selling Price 3ml, Selling Price 6ml'
                 : 'File should have columns: Product Name, Quantity, Purchase Price'}
             </p>
 
@@ -445,7 +506,7 @@ const BulkUploadModal = ({
 };
 
 // ============================================
-// ERROR MODAL
+// ERROR MODAL - UPDATED WITH SELLING PRICES
 // ============================================
 const ErrorModal = ({
   show, onClose, bulkSuccessCount, bulkErrorCount,
@@ -490,6 +551,12 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
+                      {bulkSuccessDetails[0]?.sellingPrice3ml !== undefined && (
+                        <>
+                          <th>Sell Price 3ml</th>
+                          <th>Sell Price 6ml</th>
+                        </>
+                      )}
                       {bulkSuccessDetails[0]?.quantity !== undefined && (
                         <>
                           <th>Quantity</th>
@@ -505,6 +572,12 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{item.row}</td>
                         <td>{item.productName}</td>
+                        {item.sellingPrice3ml !== undefined && (
+                          <>
+                            <td>₹{item.sellingPrice3ml}</td>
+                            <td>₹{item.sellingPrice6ml}</td>
+                          </>
+                        )}
                         {item.quantity !== undefined && (
                           <>
                             <td>{item.quantity} KG</td>
@@ -532,6 +605,12 @@ const ErrorModal = ({
                     <tr>
                       <th>Row</th>
                       <th>Product Name</th>
+                      {bulkErrors[0]?.sellingPrice3ml !== undefined && (
+                        <>
+                          <th>Sell Price 3ml</th>
+                          <th>Sell Price 6ml</th>
+                        </>
+                      )}
                       {bulkErrors[0]?.quantity !== undefined && (
                         <>
                           <th>Quantity</th>
@@ -546,6 +625,12 @@ const ErrorModal = ({
                       <tr key={index}>
                         <td>{err.row}</td>
                         <td>{err.productName || '-'}</td>
+                        {err.sellingPrice3ml !== undefined && (
+                          <>
+                            <td>{err.sellingPrice3ml || '-'}</td>
+                            <td>{err.sellingPrice6ml || '-'}</td>
+                          </>
+                        )}
                         {err.quantity !== undefined && (
                           <>
                             <td>{err.quantity || '-'}</td>
@@ -1063,10 +1148,10 @@ const XPInventory = () => {
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // ✅ NEW: Status filter
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isExporting, setIsExporting] = useState(false); // ✅ NEW
+  const [isExporting, setIsExporting] = useState(false);
 
   const [showGrams, setShowGrams] = useState(true);
 
@@ -1091,8 +1176,21 @@ const XPInventory = () => {
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const [newProduct, setNewProduct] = useState({ productName: "" });
-  const [editData, setEditData] = useState({ xpId: "", productName: "" });
+  // ✅ UPDATED: New product with selling prices
+  const [newProduct, setNewProduct] = useState({
+    productName: "",
+    sellingPrice3ml: "",
+    sellingPrice6ml: ""
+  });
+
+  // ✅ UPDATED: Edit data with selling prices
+  const [editData, setEditData] = useState({
+    xpId: "",
+    productName: "",
+    sellingPrice3ml: "",
+    sellingPrice6ml: ""
+  });
+
   const [addStockData, setAddStockData] = useState({
     xpId: "",
     productName: "",
@@ -1153,9 +1251,6 @@ const XPInventory = () => {
     }
   };
 
-  // ============================================
-  // FETCH DATA WITH PAGINATION
-  // ============================================
   const fetchInventory = async (page = 1, search = '', status = 'all') => {
     try {
       setIsLoading(true);
@@ -1164,6 +1259,10 @@ const XPInventory = () => {
         limit: 20,
         search: search
       });
+
+      if (status && status !== 'all') {
+        queryParams.set('status', status);
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/xp/get-all?${queryParams}`,
@@ -1176,22 +1275,18 @@ const XPInventory = () => {
       }
 
       const data = await response.json();
-
-      let products = data.products || [];
-
-      // ✅ Apply status filter on frontend (since backend doesn't have status filter yet)
-      if (status === 'low') {
-        products = products.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5));
-      } else if (status === 'out-of-stock') {
-        products = products.filter(p => p.quantity === 0);
-      }
+      const products = data.products || [];
 
       setInventory(products);
       setFilteredInventory(products);
+
       setPagination({
-        ...data.pagination,
-        total: products.length,
-        totalPages: Math.ceil(products.length / 20)
+        total: data.pagination?.total || 0,
+        page: data.pagination?.page || 1,
+        limit: data.pagination?.limit || 20,
+        totalPages: data.pagination?.totalPages || 0,
+        hasNextPage: data.pagination?.hasNextPage || false,
+        hasPrevPage: data.pagination?.hasPrevPage || false
       });
       setCurrentPage(data.pagination?.page || 1);
 
@@ -1251,7 +1346,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // ✅ EXPORT TO EXCEL
+  // EXPORT TO EXCEL
   // ============================================
   const handleExport = async () => {
     try {
@@ -1387,7 +1482,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // CREATE PRODUCT
+  // CREATE PRODUCT - UPDATED WITH SELLING PRICES
   // ============================================
   const handleCreateProduct = async () => {
     try {
@@ -1405,7 +1500,9 @@ const XPInventory = () => {
           credentials: 'include',
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productName: newProduct.productName.trim()
+            productName: newProduct.productName.trim(),
+            sellingPrice3ml: newProduct.sellingPrice3ml ? parseFloat(newProduct.sellingPrice3ml) : 0,
+            sellingPrice6ml: newProduct.sellingPrice6ml ? parseFloat(newProduct.sellingPrice6ml) : 0
           })
         }
       );
@@ -1418,7 +1515,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setNewProduct({ productName: "" });
+      setNewProduct({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "" });
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
@@ -1510,7 +1607,7 @@ const XPInventory = () => {
   };
 
   // ============================================
-  // UPDATE PRODUCT
+  // UPDATE PRODUCT - UPDATED WITH SELLING PRICES
   // ============================================
   const handleUpdateProduct = async () => {
     try {
@@ -1528,7 +1625,9 @@ const XPInventory = () => {
           credentials: 'include',
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productName: editData.productName.trim()
+            productName: editData.productName.trim(),
+            sellingPrice3ml: editData.sellingPrice3ml ? parseFloat(editData.sellingPrice3ml) : undefined,
+            sellingPrice6ml: editData.sellingPrice6ml ? parseFloat(editData.sellingPrice6ml) : undefined
           })
         }
       );
@@ -1541,7 +1640,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setEditData({ xpId: "", productName: "" });
+      setEditData({ xpId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "" });
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm, statusFilter);
@@ -1696,16 +1795,20 @@ const XPInventory = () => {
       const errorData = bulkErrors.map(err => ({
         'Row': err.row || '',
         'Product Name': err.productName || '',
+        'Selling Price 3ml': err.sellingPrice3ml || '',
+        'Selling Price 6ml': err.sellingPrice6ml || '',
         'Quantity': err.quantity || '',
         'Purchase Price': err.purchasePrice || '',
         'Error Reason': err.error || 'Unknown error'
       }));
 
       const worksheetData = [
-        ['Row', 'Product Name', 'Quantity', 'Purchase Price', 'Error Reason'],
+        ['Row', 'Product Name', 'Selling Price 3ml', 'Selling Price 6ml', 'Quantity', 'Purchase Price', 'Error Reason'],
         ...errorData.map(item => [
           item['Row'],
           item['Product Name'],
+          item['Selling Price 3ml'],
+          item['Selling Price 6ml'],
           item['Quantity'],
           item['Purchase Price'],
           item['Error Reason']
@@ -1717,6 +1820,8 @@ const XPInventory = () => {
       ws['!cols'] = [
         { wch: 8 },
         { wch: 35 },
+        { wch: 18 },
+        { wch: 18 },
         { wch: 12 },
         { wch: 18 },
         { wch: 50 }
@@ -1808,7 +1913,9 @@ const XPInventory = () => {
     setSelectedProduct(product);
     setEditData({
       xpId: product.xpId,
-      productName: product.productName
+      productName: product.productName,
+      sellingPrice3ml: product.sellingPrice3ml || '',
+      sellingPrice6ml: product.sellingPrice6ml || ''
     });
     setShowEditModal(true);
   };
@@ -1849,7 +1956,6 @@ const XPInventory = () => {
               />
             </div>
             <div className="xp-action-buttons-group">
-              {/* ✅ STATUS FILTER */}
               <div className="xp-status-filter">
                 <FaFilter className="xp-filter-icon" />
                 <select
@@ -1881,7 +1987,6 @@ const XPInventory = () => {
               >
                 <FaUpload /> Bulk Upload
               </button>
-              {/* ✅ EXPORT BUTTON */}
               <button
                 className="xp-export-btn"
                 onClick={handleExport}
@@ -1904,7 +2009,7 @@ const XPInventory = () => {
           </div>
         </div>
 
-        {/* Inventory Table */}
+        {/* Inventory Table - UPDATED WITH SELLING PRICES */}
         <div className="xp-data-table">
           {isLoading ? (
             <div className="xp-loading-container">
@@ -1937,6 +2042,8 @@ const XPInventory = () => {
                       </button>
                     </div>
                   </th>
+                  <th>Sell Price 3ml</th>
+                  <th>Sell Price 6ml</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -1944,7 +2051,7 @@ const XPInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="7">
                       <div className="xp-empty-state">
                         <FaBox className="xp-empty-icon" />
                         <p>No products found</p>
@@ -1987,6 +2094,8 @@ const XPInventory = () => {
                               </span>
                             )}
                           </td>
+                          <td className="xp-price-cell">₹{item.sellingPrice3ml || 0}</td>
+                          <td className="xp-price-cell">₹{item.sellingPrice6ml || 0}</td>
                           <td>
                             <span className={`xp-status-badge xp-status-${status.status}`}>
                               <span className="xp-status-dot"></span>
@@ -2015,7 +2124,7 @@ const XPInventory = () => {
 
                         {isExpanded && (
                           <tr className="xp-transaction-row">
-                            <td colSpan="5">
+                            <td colSpan="7">
                               <TransactionPanel
                                 transactions={transactionsByXpId[item.xpId]}
                                 isLoading={loadingTransactionsId === item.xpId}

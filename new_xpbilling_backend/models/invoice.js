@@ -119,12 +119,19 @@ const packageItemSchema = new mongoose.Schema({
 
 // ============================================
 // ✅ UPDATED INVOICE ITEM SUB-SCHEMA (Dispenser Item)
+// ✅ CHANGED: dispenserId → xpId (Now uses XPInventory)
 // ============================================
 const dispenserItemSchema = new mongoose.Schema({
-    dispenserId: {
+    // ✅ CHANGED: dispenserId → xpId (references XPInventory)
+    xpId: {
         type: String,
         required: true,
-        ref: 'DispenserInventory'
+        ref: 'XPInventory'
+    },
+    // ✅ KEPT for backward compatibility (old invoices)
+    dispenserId: {
+        type: String,
+        default: null
     },
     productName: {
         type: String,
@@ -140,7 +147,7 @@ const dispenserItemSchema = new mongoose.Schema({
         required: true,
         min: 1
     },
-    // ✅ NEW: Store user-entered unit price
+    // ✅ Store user-entered unit price
     unitPrice: {
         type: Number,
         default: 0,
@@ -556,28 +563,28 @@ invoiceSchema.pre('save', function () {
     // ✅ FIXED: Calculate Dispenser using unitPrice (if available)
     let totalDispenserDiscount = 0;
     let dispenserTotal = 0;
-    
+
     if (this.hasDispenser && this.dispenserItems.length > 0) {
         for (const item of this.dispenserItems) {
             // ✅ FIRST: Use unitPrice (user entered) if available
             // ✅ SECOND: Fallback to DB price if unitPrice is 0 or not set
             let unitPrice = item.unitPrice;
-            
+
             // If unitPrice is 0 or not set, use DB price
             if (!unitPrice || unitPrice === 0) {
                 unitPrice = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             }
-            
+
             // Calculate totals using unitPrice
             const originalTotal = unitPrice * item.quantity;
             const discountAmt = (originalTotal * (item.discount || 0)) / 100;
             const finalTotal = originalTotal - discountAmt;
-            
+
             // Store calculated values
             item.originalPrice = originalTotal;
             item.discountAmount = discountAmt;
             item.finalPrice = finalTotal;
-            
+
             totalDispenserDiscount += discountAmt;
             dispenserTotal += finalTotal;
         }
