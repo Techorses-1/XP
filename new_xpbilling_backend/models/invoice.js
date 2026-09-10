@@ -276,21 +276,13 @@ const workshopSnapshotSchema = new mongoose.Schema({
 const invoiceSchema = new mongoose.Schema({
     invoiceId: {
         type: String,
-        unique: true,
-        default: function () {
-            const now = new Date();
-            const year = now.getFullYear();
-            const random = Math.floor(1000 + Math.random() * 9000);
-            return `INV${year}${random}`;
-        }
+        required: true,
+        unique: true
     },
     invoiceNumber: {
         type: String,
-        unique: true,
-        default: function () {
-            // ✅ Use invoiceId if already set, so both stay identical
-            return this.invoiceId || `INV${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
-        }
+        required: true,
+        unique: true
     },
 
     customer: {

@@ -12,6 +12,7 @@ const BottlesInventory = require("../models/inventory/bottles/bottlesInventory")
 const BottlesTransactions = require("../models/inventory/bottles/bottlesTransactions");
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
+const GlobalCounter = require("../models/globalCounter");
 const { logSuccess, logFailed } = require("../utils/logHelper");
 
 // ============================================
@@ -575,12 +576,23 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
     try {
         // ============================================
-        // ✅ GENERATE INVOICE NUMBER AT THE START
+        // ✅ GENERATE INVOICE NUMBER (SEQUENTIAL, YEAR-RESET)
         // ============================================
         const now = new Date();
         const year = now.getFullYear();
-        const random = Math.floor(1000 + Math.random() * 9000);
-        const invoiceNumber = `INV${year}${random}`;
+        const counterId = `invoices-${year}`;
+
+        const counter = await GlobalCounter.findOneAndUpdate(
+            { id: counterId },
+            { $inc: { count: 1 } },
+            {
+                new: true,
+                upsert: true,
+                setDefaultsOnInsert: true
+            }
+        );
+
+        const invoiceNumber = `INV${year}${String(counter.count).padStart(4, "0")}`;
         console.log("📄 Generated Invoice Number:", invoiceNumber);
 
         const {
@@ -1612,6 +1624,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         });
     }
 });
+
 
 // ============================================
 // UPDATE INVOICE - WITH EDITABLE DISPENSER PRICE
