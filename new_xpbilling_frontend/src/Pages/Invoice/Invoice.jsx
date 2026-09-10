@@ -510,6 +510,9 @@ const Invoice = () => {
 
     // ========== INVOICE FORM STATE ==========
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [newCustomerName, setNewCustomerName] = useState("");
+    const [newCustomerEmail, setNewCustomerEmail] = useState("");
+    const [newCustomerContact, setNewCustomerContact] = useState("");
     const [selectedWorkshop, setSelectedWorkshop] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
 
@@ -796,6 +799,27 @@ const Invoice = () => {
             setXpOilValidationError("");
         }
     }, [xpOilItems, selectedPackage]);
+
+    // ============================================
+    // CUSTOMER SELECTION - Fetch Loyalty Coins
+    // ============================================
+    // ============================================
+    // ✅ AUTO-FILL NEW CUSTOMER FIELDS WHEN CUSTOMER SELECTED
+    // ============================================
+    useEffect(() => {
+        if (selectedCustomer) {
+            const cust = customers.find(c => c.customerId === selectedCustomer.value);
+            if (cust) {
+                setNewCustomerName(cust.customerName || "");
+                setNewCustomerEmail(cust.email || "");
+                setNewCustomerContact(cust.contactNumber || "");
+            }
+        } else {
+            setNewCustomerName("");
+            setNewCustomerEmail("");
+            setNewCustomerContact("");
+        }
+    }, [selectedCustomer, customers]);
 
     // ============================================
     // CUSTOMER SELECTION - Fetch Loyalty Coins
@@ -1336,9 +1360,25 @@ const Invoice = () => {
     // ============================================
     const handleCreateInvoice = async () => {
         try {
-            if (!selectedCustomer) {
-                toast.error("Please select a customer");
-                return;
+            const isNewCustomer = !selectedCustomer;
+
+            if (isNewCustomer) {
+                if (!newCustomerName.trim()) {
+                    toast.error("Please enter customer name");
+                    return;
+                }
+                if (!newCustomerContact.trim()) {
+                    toast.error("Please enter customer phone number");
+                    return;
+                }
+                if (!/^[0-9]{10}$/.test(newCustomerContact.trim())) {
+                    toast.error("Phone number must be exactly 10 digits");
+                    return;
+                }
+                if (newCustomerEmail.trim() && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(newCustomerEmail.trim())) {
+                    toast.error("Please enter a valid email address");
+                    return;
+                }
             }
 
             if (!selectedPackage && dispenserItems.length === 0) {
@@ -1359,7 +1399,12 @@ const Invoice = () => {
             setIsSubmitting(true);
 
             const payload = {
-                customerId: selectedCustomer.value,
+                customerId: selectedCustomer?.value || null,
+                newCustomer: isNewCustomer ? {
+                    customerName: newCustomerName.trim(),
+                    email: newCustomerEmail.trim() || undefined,
+                    contactNumber: newCustomerContact.trim()
+                } : null,
                 workshopId: packageMode ? null : (selectedWorkshop?.value || null),
                 packageId: selectedPackage?.value || null,
                 xpOilItems: xpOilItems.map(item => ({
@@ -1556,6 +1601,9 @@ const Invoice = () => {
     // ============================================
     const resetForm = () => {
         setSelectedCustomer(null);
+        setNewCustomerName("");
+        setNewCustomerEmail("");
+        setNewCustomerContact("");
         setSelectedWorkshop(null);
         setSelectedPackage(null);
         setXpOilItems([]);
@@ -2160,20 +2208,70 @@ const Invoice = () => {
                             </h3>
                             <div className="inv-form-row">
                                 <div className="inv-form-field">
-                                    <label>Search &amp; Select Customer *</label>
+                                    <label>Search &amp; Select Customer</label>
                                     <Select
                                         options={customerOptions}
                                         value={selectedCustomer}
                                         onChange={setSelectedCustomer}
-                                        placeholder="🔍 Type to search customers..."
+                                        placeholder="🔍 Type to search customers... (or fill below to add new)"
                                         isClearable
                                         styles={customSelectStyles}
-                                        noOptionsMessage={() => "No customers found"}
+                                        noOptionsMessage={() => "No customers found — fill details below to add new"}
                                         isDisabled={isEditing}
                                     />
                                     {isEditing && selectedCustomer && (
                                         <small className="inv-hint">Customer cannot be changed in edit mode</small>
                                     )}
+                                    {!isEditing && !selectedCustomer && (
+                                        <small className="inv-hint inv-warning-hint">
+                                            No customer selected — fill the fields below to create a new customer
+                                        </small>
+                                    )}
+                                    {!isEditing && selectedCustomer && (
+                                        <small className="inv-hint">
+                                            Existing customer selected — fields below are read-only
+                                        </small>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="inv-form-row">
+                                <div className="inv-form-field">
+                                    <label>Customer Name *</label>
+                                    <input
+                                        type="text"
+                                        value={newCustomerName}
+                                        onChange={(e) => setNewCustomerName(e.target.value)}
+                                        placeholder="Enter customer name"
+                                        autoComplete="off"
+                                        disabled={!!selectedCustomer || isEditing}
+                                    />
+                                </div>
+                                <div className="inv-form-field">
+                                    <label>Email (Optional)</label>
+                                    <input
+                                        type="email"
+                                        value={newCustomerEmail}
+                                        onChange={(e) => setNewCustomerEmail(e.target.value)}
+                                        placeholder="Enter email"
+                                        autoComplete="off"
+                                        disabled={!!selectedCustomer || isEditing}
+                                    />
+                                </div>
+                                <div className="inv-form-field">
+                                    <label>Phone Number *</label>
+                                    <input
+                                        type="tel"
+                                        value={newCustomerContact}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setNewCustomerContact(val);
+                                        }}
+                                        placeholder="10-digit mobile number"
+                                        autoComplete="off"
+                                        disabled={!!selectedCustomer || isEditing}
+                                        maxLength={10}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -2910,7 +3008,8 @@ const Invoice = () => {
                                 disabled={
                                     isSubmitting ||
                                     isUpdating ||
-                                    !selectedCustomer ||
+                                    (!selectedCustomer && !newCustomerName.trim()) ||
+                                    (!selectedCustomer && !newCustomerContact.trim()) ||
                                     (selectedPackage && xpOilItems.length === 0) ||
                                     (selectedPackage && xpOilValidationError)
                                 }

@@ -585,6 +585,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
         const {
             customerId,
+            newCustomer,
             workshopId,
             packageId,
             xpOilItems,
@@ -599,6 +600,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
         console.log("\n📋 Request Data:");
         console.log("  👤 Customer ID:", customerId);
+        console.log("  👤 New Customer:", newCustomer);
         console.log("  🏭 Workshop ID:", workshopId);
         console.log("  📦 Package ID:", packageId);
         console.log("  🧪 XP Oil Items:", xpOilItems?.length || 0);
@@ -608,12 +610,158 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         console.log("  🪙 Loyalty Coins Used:", loyaltyCoinsUsed);
 
         // ============================================
-        // 1. VALIDATE CUSTOMER
+        // 1. VALIDATE / CREATE CUSTOMER
         // ============================================
-        console.log("\n🔍 Step 1: Validating Customer...");
+        console.log("\n🔍 Step 1: Validating / Creating Customer...");
 
-        if (!customerId) {
-            console.log("❌ Customer ID missing");
+        let customer = null;
+
+        // ✅ CASE A: Existing customer selected
+        if (customerId) {
+            console.log("  ℹ️ Existing customer ID provided:", customerId);
+
+            customer = await Customer.findOne({ customerId });
+            if (!customer) {
+                console.log("❌ Customer not found:", customerId);
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: 'Customer not found'
+                });
+                return res.status(404).json({
+                    message: "Customer not found"
+                });
+            }
+            console.log("✅ Customer found:", customer.customerName, "|", customer.contactNumber);
+        }
+        // ✅ CASE B: New customer data provided
+        else if (newCustomer) {
+            console.log("  ℹ️ No customerId — attempting to create new customer");
+
+            const { customerName, email, contactNumber } = newCustomer;
+
+            // Validate required fields
+            if (!customerName || !customerName.trim()) {
+                console.log("❌ New customer: name missing");
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: 'Customer name is required'
+                });
+                return res.status(400).json({
+                    message: "Customer name is required"
+                });
+            }
+
+            if (!contactNumber || !contactNumber.trim()) {
+                console.log("❌ New customer: phone missing");
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: 'Customer phone number is required'
+                });
+                return res.status(400).json({
+                    message: "Customer phone number is required"
+                });
+            }
+
+            // Validate phone format (10 digits)
+            if (!/^[0-9]{10}$/.test(contactNumber.trim())) {
+                console.log("❌ New customer: invalid phone format:", contactNumber);
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: 'Phone number must be exactly 10 digits'
+                });
+                return res.status(400).json({
+                    message: "Phone number must be exactly 10 digits"
+                });
+            }
+
+            // Validate email format (if provided)
+            if (email && email.trim() && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email.trim())) {
+                console.log("❌ New customer: invalid email format:", email);
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: 'Invalid email format'
+                });
+                return res.status(400).json({
+                    message: "Invalid email format"
+                });
+            }
+
+            // Check duplicate phone
+            const existingByPhone = await Customer.findOne({ contactNumber: contactNumber.trim() });
+            if (existingByPhone) {
+                console.log("❌ New customer: phone already exists:", contactNumber);
+                await logFailed({
+                    module: 'Invoice',
+                    userId: req.user.userId,
+                    userName: req.user.name,
+                    userEmail: req.user.email,
+                    action: 'Create',
+                    heading: 'Invoice Creation Failed',
+                    description: `Customer with phone ${contactNumber} already exists`
+                });
+                return res.status(400).json({
+                    message: "Customer with this phone number already exists"
+                });
+            }
+
+            // Check duplicate email (if provided)
+            if (email && email.trim()) {
+                const existingByEmail = await Customer.findOne({ email: email.trim() });
+                if (existingByEmail) {
+                    console.log("❌ New customer: email already exists:", email);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: `Customer with email ${email} already exists`
+                    });
+                    return res.status(400).json({
+                        message: "Customer with this email already exists"
+                    });
+                }
+            }
+
+            // Create the new customer
+            const newCustDoc = new Customer({
+                customerName: customerName.trim(),
+                email: email && email.trim() ? email.trim() : undefined,
+                contactNumber: contactNumber.trim()
+            });
+
+            customer = await newCustDoc.save();
+            console.log("✅ New customer created:", customer.customerName, "|", customer.customerId);
+        }
+        // ✅ CASE C: Neither provided
+        else {
+            console.log("❌ No customerId and no newCustomer data provided");
             await logFailed({
                 module: 'Invoice',
                 userId: req.user.userId,
@@ -628,23 +776,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             });
         }
 
-        const customer = await Customer.findOne({ customerId });
-        if (!customer) {
-            console.log("❌ Customer not found:", customerId);
-            await logFailed({
-                module: 'Invoice',
-                userId: req.user.userId,
-                userName: req.user.name,
-                userEmail: req.user.email,
-                action: 'Create',
-                heading: 'Invoice Creation Failed',
-                description: 'Customer not found'
-            });
-            return res.status(404).json({
-                message: "Customer not found"
-            });
-        }
-        console.log("✅ Customer found:", customer.customerName, "|", customer.contactNumber);
         console.log("  🪙 Customer Loyalty Coins:", customer.loyaltyCoins || 0);
 
         // ============================================
@@ -703,11 +834,11 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             }
 
             const customerInWorkshop = selectedWorkshop.customers.find(
-                c => c.customerId === customerId
+                c => c.customerId === customer.customerId
             );
 
             if (!customerInWorkshop) {
-                console.log("❌ Customer not in workshop:", customerId);
+                console.log("❌ Customer not in workshop:", customer.customerId);
                 await logFailed({
                     module: 'Invoice',
                     userId: req.user.userId,
@@ -1344,7 +1475,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         console.log("\n🔍 Step 10: Updating Workshop...");
         if (hasWorkshop && selectedWorkshop) {
             const customerIndex = selectedWorkshop.customers.findIndex(
-                c => c.customerId === customerId
+                c => c.customerId === customer.customerId
             );
 
             if (customerIndex !== -1) {
