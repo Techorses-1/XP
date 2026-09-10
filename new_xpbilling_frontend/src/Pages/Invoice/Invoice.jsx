@@ -2130,12 +2130,9 @@ const Invoice = () => {
         data: o
     }));
 
-    // ✅ UPDATED: Use dispenserOils populated from XP oils - SHOW ALL OILS
-    console.log("🔍 DISPENSER OPTIONS - dispenserOils length:", dispenserOils.length);
-    console.log("📋 dispenserOils data:", dispenserOils);
+    
 
     const dispenserOptions = dispenserOils.map(o => {
-        console.log(`📦 Mapping oil: ${o.productName} | xpId: ${o.xpId}`);
         return {
             value: o.xpId,
             label: `${o.productName} ${o.sellingPrice3ml > 0 ? `(3ml: ₹${o.sellingPrice3ml})` : ''} ${o.sellingPrice6ml > 0 ? `(6ml: ₹${o.sellingPrice6ml})` : ''}`,
@@ -2143,7 +2140,6 @@ const Invoice = () => {
         };
     });
 
-    console.log("✅ FINAL DISPENSER OPTIONS:", dispenserOptions);
 
     const promoOptions = promoCodes.map(p => ({
         value: p.promoId,
