@@ -1427,6 +1427,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         // ============================================
         console.log("\n📝 Step 9: Creating Invoice...");
         const invoice = new Invoice({
+            invoiceId: invoiceNumber,
+            invoiceNumber: invoiceNumber,
             customer: {
                 customerId: customer.customerId,
                 customerName: customer.customerName,

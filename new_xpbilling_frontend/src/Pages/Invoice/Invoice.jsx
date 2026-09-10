@@ -642,9 +642,7 @@ const Invoice = () => {
             console.log("📦 RAW DATA FROM BACKEND:", data);
 
             const oils = data.products || [];
-            console.log("✅ TOTAL OILS RECEIVED:", oils.length);
-            console.log("📋 OIL NAMES:", oils.map(o => o.productName));
-            console.log("📋 OIL IDs:", oils.map(o => o.xpId));
+           
 
             setXpOils(oils);
             // ✅ SHOW ALL XP OILS - NO FILTER
