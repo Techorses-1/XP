@@ -60,7 +60,9 @@ const checkInvoicePermission = (req, res, next) => {
 // HELPER: Reduce Bottles Inventory
 // ============================================
 const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
-    const itemTypes = ['Bottle', 'Cap', 'Pump', 'Box'];
+    const itemTypes = (mlSize === '3' || mlSize === '6')
+        ? ['Bottle', 'Cap', 'Roll on', 'Box']
+        : ['Bottle', 'Cap', 'Pump', 'Box'];
     const results = [];
 
     for (const itemType of itemTypes) {
@@ -123,7 +125,9 @@ const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason,
 // HELPER: Return Bottles Inventory (IN)
 // ============================================
 const returnBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
-    const itemTypes = ['Bottle', 'Cap', 'Pump', 'Box'];
+    const itemTypes = (mlSize === '3' || mlSize === '6')
+        ? ['Bottle', 'Cap', 'Roll on', 'Box']
+        : ['Bottle', 'Cap', 'Pump', 'Box'];
     const results = [];
 
     for (const itemType of itemTypes) {
