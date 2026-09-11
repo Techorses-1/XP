@@ -1,6 +1,6 @@
 import React from "react";
 import "./InvoicePrint.scss";
-import logo from "../../../assets/logo/logo.png";
+import logo from "../../../assets/logo/xp_logo.png";
 
 const InvoicePrint = ({ invoice }) => {
     if (!invoice) return null;
@@ -160,6 +160,7 @@ const InvoicePrint = ({ invoice }) => {
                         <div className="invoice-logo">
                             <img src={logo} alt="Company Logo" />
                         </div>
+                        <p className="makers-line">By makers of jass perfume</p>
                         <div className="company-address">
                             <div className="address-details">
                                 <p>Shop no 4, Siddharth Complex, RC Dutt Rd, Aradhana Society,</p>
@@ -244,6 +245,15 @@ const InvoicePrint = ({ invoice }) => {
                 <div className="items-section">
                     <h3>Items Details</h3>
                     <table className="items-table">
+                        <colgroup>
+                            <col style={{ width: '4%' }} />
+                            <col style={{ width: '56%' }} />
+                            <col style={{ width: '6%' }} />
+                            <col style={{ width: '6%' }} />
+                            <col style={{ width: '10%' }} />
+                            <col style={{ width: '6%' }} />
+                            <col style={{ width: '10%' }} />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -251,7 +261,7 @@ const InvoicePrint = ({ invoice }) => {
                                 <th>ML</th>
                                 <th>Qty</th>
                                 <th>Price</th>
-                                <th>Disc %</th>
+                                <th>Disc</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
@@ -260,7 +270,26 @@ const InvoicePrint = ({ invoice }) => {
                             {hasPackage && packageItem && (
                                 <tr>
                                     <td>1</td>
-                                    <td><strong>{packageItem.packageName}</strong></td>
+                                    <td>
+                                        <strong>
+                                            {packageItem.xpOilItems && packageItem.xpOilItems.length > 0 ? (
+                                                packageItem.xpOilItems.length === 1 ? (
+                                                    // Single oil → no bullet, just name
+                                                    packageItem.xpOilItems[0].productName
+                                                ) : (
+                                                    // Multiple oils → bullet each
+                                                    packageItem.xpOilItems.map((oil, i) => (
+                                                        <React.Fragment key={i}>
+                                                            • {oil.productName}
+                                                            {i < packageItem.xpOilItems.length - 1 && <br />}
+                                                        </React.Fragment>
+                                                    ))
+                                                )
+                                            ) : (
+                                                packageItem.packageName
+                                            )}
+                                        </strong>
+                                    </td>
                                     <td>{packageItem.bottleML}ml</td>
                                     <td>1</td>
                                     <td>{formatCurrency(packageItem.pricing)}</td>

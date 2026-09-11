@@ -544,7 +544,8 @@ const Invoice = () => {
 
     // ========== PACKAGE DISCOUNT (EDITABLE) ==========
     const [packageDiscountInput, setPackageDiscountInput] = useState(0);
-
+    // ========== FRAGRANCE BASE ML (EDITABLE) ==========
+    const [fragranceBaseML, setFragranceBaseML] = useState("");
     // ========== DISPENSER ADD FORM ==========
     const [dispenserSelect, setDispenserSelect] = useState(null);
     const [dispenserML, setDispenserML] = useState("");
@@ -642,7 +643,7 @@ const Invoice = () => {
             console.log("📦 RAW DATA FROM BACKEND:", data);
 
             const oils = data.products || [];
-           
+
 
             setXpOils(oils);
             // ✅ SHOW ALL XP OILS - NO FILTER
@@ -774,21 +775,15 @@ const Invoice = () => {
     }, [selectedWorkshop, selectedCustomer, packages, packageMode]);
 
     // ============================================
-    // ✅ VALIDATE XP OIL TOTAL vs PACKAGE FRAGRANCE
+    // ✅ TRACK XP OIL TOTAL (NO MATCH VALIDATION)
     // ============================================
     useEffect(() => {
         if (selectedPackage) {
-            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
             const totalML = xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0);
             setXpOilTotalML(totalML);
 
-            const tolerance = 0.01;
             if (xpOilItems.length === 0) {
                 setXpOilValidationError("Please add at least one XP Oil");
-            } else if (Math.abs(totalML - packageFragranceML) > tolerance) {
-                setXpOilValidationError(
-                    `Total XP Oil (${totalML}ml) does not match package fragrance (${packageFragranceML}ml). ${totalML < packageFragranceML ? `Need ${(packageFragranceML - totalML).toFixed(2)}ml more.` : `Remove ${(totalML - packageFragranceML).toFixed(2)}ml.`}`
-                );
             } else {
                 setXpOilValidationError("");
             }
@@ -797,6 +792,18 @@ const Invoice = () => {
             setXpOilValidationError("");
         }
     }, [xpOilItems, selectedPackage]);
+
+    // ============================================
+    // ✅ AUTO-FILL FRAGRANCE BASE ML WHEN PACKAGE SELECTED
+    // ============================================
+    useEffect(() => {
+        if (selectedPackage) {
+            const defaultML = selectedPackage.data?.alcoholQty || 0;
+            setFragranceBaseML(defaultML.toString());
+        } else {
+            setFragranceBaseML("");
+        }
+    }, [selectedPackage]);
 
     // ============================================
     // CUSTOMER SELECTION - Fetch Loyalty Coins
@@ -1023,16 +1030,7 @@ const Invoice = () => {
             return;
         }
 
-        if (selectedPackage) {
-            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
-            const currentTotal = xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0);
-            const newTotal = currentTotal + ml;
 
-            if (newTotal > packageFragranceML + tolerance) {
-                toast.error(`Total would exceed package fragrance (${packageFragranceML}ml). Current: ${currentTotal}ml, Adding: ${ml}ml`);
-                return;
-            }
-        }
 
         const newItem = {
             xpId: xpOilSelect.value,
@@ -1070,20 +1068,6 @@ const Invoice = () => {
         }
 
         const updatedItems = [...xpOilItems];
-        const currentTotal = xpOilItems.reduce((sum, item, i) => {
-            if (i === index) return sum + ml;
-            return sum + (item.ml || 0);
-        }, 0);
-
-        if (selectedPackage) {
-            const packageFragranceML = selectedPackage.data?.fragranceQty || 0;
-            const tolerance = 0.01;
-            if (currentTotal > packageFragranceML + tolerance) {
-                toast.error(`Total would exceed package fragrance (${packageFragranceML}ml)`);
-                return;
-            }
-        }
-
         updatedItems[index].ml = ml;
         setXpOilItems(updatedItems);
     };
@@ -1389,8 +1373,8 @@ const Invoice = () => {
                 return;
             }
 
-            if (selectedPackage && xpOilValidationError) {
-                toast.error(`XP Oil validation error: ${xpOilValidationError}`);
+            if (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0)) {
+                toast.error("Please enter a valid Fragrance Base ML (greater than 0)");
                 return;
             }
 
@@ -1409,6 +1393,7 @@ const Invoice = () => {
                     xpId: item.xpId,
                     ml: item.ml
                 })),
+                fragranceBaseML: parseFloat(fragranceBaseML) || 0,
                 packageDiscount: packageDiscountInput || 0,
                 // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
@@ -1488,8 +1473,8 @@ const Invoice = () => {
                 return;
             }
 
-            if (selectedPackage && xpOilValidationError) {
-                toast.error(`XP Oil validation error: ${xpOilValidationError}`);
+            if (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0)) {
+                toast.error("Please enter a valid Fragrance Base ML (greater than 0)");
                 return;
             }
 
@@ -1501,6 +1486,7 @@ const Invoice = () => {
                     xpId: item.xpId,
                     ml: item.ml
                 })),
+                fragranceBaseML: parseFloat(fragranceBaseML) || 0,
                 packageDiscount: packageDiscountInput || 0,
                 // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
@@ -1613,9 +1599,12 @@ const Invoice = () => {
         setSelectedPromo(null);
         setPaymentStatus("Cash");
         setNotes("");
+
         setInvoiceDate(new Date().toISOString().split('T')[0]);
         setPackageDiscountInput(0);
+        setFragranceBaseML("");
         setRecentWorkshop(null);
+
         setUseLoyaltyCoins(false);
         setLoyaltyCoinsUsed(0);
         setAvailableLoyaltyCoins(0);
@@ -1765,6 +1754,7 @@ const Invoice = () => {
                     }
                 });
                 setPackageDiscountInput(pkg.discount || 0);
+                setFragranceBaseML((pkg.alcoholQty || 0).toString());
 
                 if (pkg.xpOilItems && pkg.xpOilItems.length > 0) {
                     const loadedItems = pkg.xpOilItems.map(item => ({
@@ -2128,7 +2118,7 @@ const Invoice = () => {
         data: o
     }));
 
-    
+
 
     const dispenserOptions = dispenserOils.map(o => {
         return {
@@ -2463,27 +2453,20 @@ const Invoice = () => {
                                         </div>
                                     </div>
 
-                                    {/* ✅ XP Oil Validation Status */}
+                                    {/* ✅ XP Oil Total Display */}
                                     {selectedPackage && (
                                         <div className="inv-xp-validation">
                                             <div className="inv-xp-total">
                                                 <span>Total Fragrance: </span>
                                                 <strong>{xpOilTotalML.toFixed(2)}ml</strong>
-                                                <span className="inv-xp-package-qty">
-                                                    (Required: {selectedPackage.data?.fragranceQty || 0}ml)
-                                                </span>
                                             </div>
-                                            {xpOilValidationError ? (
-                                                <div className="inv-xp-error">
-                                                    <FaBan /> {xpOilValidationError}
-                                                </div>
-                                            ) : xpOilItems.length > 0 ? (
-                                                <div className="inv-xp-success">
-                                                    <FaCheck /> ✓ Total matches package fragrance!
+                                            {xpOilItems.length === 0 ? (
+                                                <div className="inv-xp-info">
+                                                    <span>Add at least one XP Oil</span>
                                                 </div>
                                             ) : (
-                                                <div className="inv-xp-info">
-                                                    <span>Add XP Oils to match the package fragrance quantity</span>
+                                                <div className="inv-xp-success">
+                                                    <FaCheck /> ✓ {xpOilItems.length} XP Oil(s) added
                                                 </div>
                                             )}
                                         </div>
@@ -2541,6 +2524,27 @@ const Invoice = () => {
                                                         </tr>
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* ✅ NEW: Fragrance Base ML Input */}
+                                    {selectedPackage && (
+                                        <div className="inv-form-row inv-fragrance-base-row">
+                                            <div className="inv-form-field">
+                                                <label><FaPercentage /> Fragrance Base (ml) *</label>
+                                                <input
+                                                    type="number"
+                                                    min="0.1"
+                                                    step="0.1"
+                                                    value={fragranceBaseML}
+                                                    onChange={(e) => setFragranceBaseML(e.target.value)}
+                                                    placeholder="Enter Fragrance Base ML"
+                                                    autoComplete="off"
+                                                />
+                                                <small className="inv-hint">
+                                                    Default from package: {selectedPackage.data?.alcoholQty || 0}ml. You can change it.
+                                                </small>
                                             </div>
                                         </div>
                                     )}
@@ -3005,7 +3009,7 @@ const Invoice = () => {
                                     (!selectedCustomer && !newCustomerName.trim()) ||
                                     (!selectedCustomer && !newCustomerContact.trim()) ||
                                     (selectedPackage && xpOilItems.length === 0) ||
-                                    (selectedPackage && xpOilValidationError)
+                                    (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0))
                                 }
                                 type="button"
                             >
