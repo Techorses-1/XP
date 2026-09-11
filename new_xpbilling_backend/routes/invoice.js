@@ -1065,10 +1065,11 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             }
             console.log("  ✅ Alcohol stock sufficient");
 
-            // Check Bottles Inventory for package
             const mlSize = selectedPackage.bottleML.toString();
             console.log("  🧴 Bottle ML:", mlSize, "ml");
-            const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
+            const bottleItems = (mlSize === '3' || mlSize === '6')
+                ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                : ['Bottle', 'Cap', 'Pump', 'Box'];
             for (const itemType of bottleItems) {
                 const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                 if (!bottleStock || bottleStock.quantity < 1) {
@@ -1232,7 +1233,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
                 // Check Bottles Inventory for dispenser
                 const mlSize = ml.toString();
-                const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
+                const bottleItems = (mlSize === '3' || mlSize === '6')
+                    ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                    : ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                     if (!bottleStock || bottleStock.quantity < quantity) {
@@ -1901,7 +1904,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
 
             const mlSize = selectedPackage.bottleML.toString();
             console.log("  🧴 Bottle ML:", mlSize, "ml");
-            const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
+            const bottleItems = (mlSize === '3' || mlSize === '6')
+                ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                : ['Bottle', 'Cap', 'Pump', 'Box'];
             for (const itemType of bottleItems) {
                 const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                 if (!bottleStock || bottleStock.quantity < 1) {
@@ -2066,7 +2071,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 console.log(`  ✅ Stock sufficient`);
 
                 const mlSize = ml.toString();
-                const bottleItems = ['Bottle', 'Cap', 'Pump', 'Box'];
+                const bottleItems = (mlSize === '3' || mlSize === '6')
+                    ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                    : ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                     if (!bottleStock || bottleStock.quantity < quantity) {
