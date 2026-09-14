@@ -10,6 +10,7 @@ const InvoicePrint = ({ invoice }) => {
         invoiceDate,
         customer,
         packageItem,
+        packageItems,
         dispenserItems,
         paymentStatus,
         subtotalWithoutGST,
@@ -76,7 +77,6 @@ const InvoicePrint = ({ invoice }) => {
             }
         }
 
-        // Handle decimal part (paise)
         const decimalPart = Math.round((num - Math.floor(num)) * 100);
         if (decimalPart > 0) {
             if (words !== '') words += ' and ';
@@ -115,19 +115,46 @@ const InvoicePrint = ({ invoice }) => {
     };
 
     // ============================================
-    // ✅ GET VALUES DIRECTLY FROM INVOICE
+    // ✅ NORMALIZE PACKAGES TO ARRAY
+    // Handles both old packageItem (single) and new packageItems[] (array)
     // ============================================
-    const packageFinalPrice = packageItem?.finalPrice || packageItem?.pricing || 0;
+    const normalizePackages = () => {
+        if (packageItems && packageItems.length > 0) {
+            return packageItems.map(p => {
+                const o = { ...p };
+                if (!o.quantity) o.quantity = 1;
+                return o;
+            });
+        }
+        if (packageItem && packageItem.packageId) {
+            const o = { ...packageItem };
+            if (!o.quantity) o.quantity = 1;
+            return [o];
+        }
+        return [];
+    };
 
-    // ✅ Dispenser Total - Use finalPrice from database
+    const packages = normalizePackages();
+
+    // ============================================
+    // ✅ COMPUTED TOTALS
+    // ============================================
+    // Package final total (sum of all packages, factoring qty)
+    const packageFinalTotal = packages.reduce((sum, pkg) => {
+        const qty = pkg.quantity || 1;
+        const unitFinal = pkg.finalPrice || pkg.pricing || 0;
+        return sum + (unitFinal * qty);
+    }, 0);
+
+    // Dispenser Total
     const dispenserTotal = hasDispenser && dispenserItems
         ? dispenserItems.reduce((sum, item) => sum + (item.finalPrice || 0), 0)
         : 0;
 
-    // ✅ Price (excl GST) = BEFORE promo and loyalty (only package + dispenser discounts)
+    // Price (excl GST) — from stored invoice value
     const priceExclGST = subtotalWithoutGST || 0;
 
-    // ✅ Subtotal = AFTER promo and loyalty discounts
+    // Subtotal after all discounts
     const subtotalAfterAllDiscounts = (subtotalWithoutGST || 0) - (promoDiscount || 0) - (loyaltyDiscountAmount || 0);
 
     // ============================================
@@ -139,13 +166,34 @@ const InvoicePrint = ({ invoice }) => {
     const declaration =
         `We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.`;
 
+    // ============================================
+    // HELPERS FOR PRODUCT NAME CELL
+    // ============================================
+    const renderPackageOilNames = (pkg) => {
+        const oils = pkg.xpOilItems || [];
+        if (oils.length === 0) {
+            return <strong>{pkg.packageName}</strong>;
+        }
+        if (oils.length === 1) {
+            return <strong>{oils[0].productName}</strong>;
+        }
+        return (
+            <strong>
+                {oils.map((oil, i) => (
+                    <React.Fragment key={i}>
+                        • {oil.productName}
+                        {i < oils.length - 1 && <br />}
+                    </React.Fragment>
+                ))}
+            </strong>
+        );
+    };
+
     return (
         <div id="invoice-print">
             <div className="invoice-container">
 
-                {/* ============================================
-                    HEADER - Company Logo & Address
-                ============================================ */}
+                {/* HEADER */}
                 <div className="invoice-header">
                     <div className="company-top-info">
                         <div className="company-name-left">
@@ -165,22 +213,17 @@ const InvoicePrint = ({ invoice }) => {
                             <div className="address-details">
                                 <p>Shop no 4, Siddharth Complex, RC Dutt Rd, Aradhana Society,</p>
                                 <p>Vishwas Colony, Alkapuri, Vadodara, Gujarat 390023</p>
-
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ============================================
-                    TAX INVOICE HEADING
-                ============================================ */}
+                {/* TAX INVOICE HEADING */}
                 <div className="tax-invoice-heading">
                     <h1>TAX INVOICE</h1>
                 </div>
 
-                {/* ============================================
-                    INVOICE & CUSTOMER DETAILS
-                ============================================ */}
+                {/* INVOICE & CUSTOMER DETAILS */}
                 <div className="invoice-details-section">
                     <div className="customer-info">
                         <h3>Billing Details</h3>
@@ -239,9 +282,7 @@ const InvoicePrint = ({ invoice }) => {
                     </div>
                 </div>
 
-                {/* ============================================
-                    ITEMS TABLE - Package & Dispenser
-                ============================================ */}
+                {/* ITEMS TABLE */}
                 <div className="items-section">
                     <h3>Items Details</h3>
                     <table className="items-table">
@@ -266,48 +307,36 @@ const InvoicePrint = ({ invoice }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Package Item */}
-                            {hasPackage && packageItem && (
-                                <tr>
-                                    <td>1</td>
-                                    <td>
-                                        <strong>
-                                            {packageItem.xpOilItems && packageItem.xpOilItems.length > 0 ? (
-                                                packageItem.xpOilItems.length === 1 ? (
-                                                    // Single oil → no bullet, just name
-                                                    packageItem.xpOilItems[0].productName
-                                                ) : (
-                                                    // Multiple oils → bullet each
-                                                    packageItem.xpOilItems.map((oil, i) => (
-                                                        <React.Fragment key={i}>
-                                                            • {oil.productName}
-                                                            {i < packageItem.xpOilItems.length - 1 && <br />}
-                                                        </React.Fragment>
-                                                    ))
-                                                )
-                                            ) : (
-                                                packageItem.packageName
-                                            )}
-                                        </strong>
-                                    </td>
-                                    <td>{packageItem.bottleML}ml</td>
-                                    <td>1</td>
-                                    <td>{formatCurrency(packageItem.pricing)}</td>
-                                    <td>{packageItem.discount || 0}%</td>
-                                    <td>{formatCurrency(packageItem.finalPrice || packageItem.pricing)}</td>
-                                </tr>
+                            {/* ✅ PACKAGES - Loop through all packages */}
+                            {packages.length > 0 && (
+                                packages.map((pkg, pkgIdx) => {
+                                    const qty = pkg.quantity || 1;
+                                    const unitFinal = pkg.finalPrice || pkg.pricing || 0;
+                                    const lineTotal = unitFinal * qty;
+
+                                    return (
+                                        <tr key={pkgIdx}>
+                                            <td>{pkgIdx + 1}</td>
+                                            <td>{renderPackageOilNames(pkg)}</td>
+                                            <td>{pkg.bottleML}ml</td>
+                                            <td>{qty}</td>
+                                            <td>{formatCurrency(pkg.pricing)}</td>
+                                            <td>{pkg.discount || 0}%</td>
+                                            <td>{formatCurrency(lineTotal)}</td>
+                                        </tr>
+                                    );
+                                })
                             )}
 
-                            {/* ✅ Dispenser Items - USING DATABASE VALUES DIRECTLY */}
+                            {/* ✅ DISPENSER ITEMS */}
                             {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                 dispenserItems.map((item, index) => {
                                     const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
-                                    // ✅ Use finalPrice directly from database!
                                     const finalPrice = item.finalPrice || 0;
 
                                     return (
-                                        <tr key={index}>
-                                            <td>{hasPackage ? index + 2 : index + 1}</td>
+                                        <tr key={`disp-${index}`}>
+                                            <td>{packages.length > 0 ? packages.length + index + 1 : index + 1}</td>
                                             <td><strong>{item.productName}</strong></td>
                                             <td>{item.ml}ml</td>
                                             <td>{item.quantity}</td>
@@ -322,44 +351,37 @@ const InvoicePrint = ({ invoice }) => {
                     </table>
                 </div>
 
-                {/* ============================================
-                    ✅ TOTALS SECTION - CORRECT ORDER
-                ============================================ */}
+                {/* TOTALS SECTION */}
                 <div className="totals-section">
                     <div className="amount-details">
                         <table>
                             <tbody>
-                                {/* 1. PRICE (excl GST) - BEFORE promo & loyalty */}
                                 <tr>
                                     <td><strong>Price(Excl gst):</strong></td>
                                     <td><strong>{formatCurrency(priceExclGST)}</strong></td>
                                 </tr>
 
-                                {/* 2. Package Price (after discount) */}
-                                {hasPackage && packageItem && (
+                                {packages.length > 0 && (
                                     <tr>
-                                        <td>Package Price:</td>
-                                        <td>{formatCurrency(packageFinalPrice)}</td>
+                                        <td>Packages Price:</td>
+                                        <td>{formatCurrency(packageFinalTotal)}</td>
                                     </tr>
                                 )}
 
-                                {/* 3. Dispenser Price (after discount) */}
                                 {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                     <tr>
-                                        <td >Dispenser Price:</td>
+                                        <td>Dispenser Price:</td>
                                         <td>{formatCurrency(dispenserTotal)}</td>
                                     </tr>
                                 )}
 
-                                {/* 4. Promo Discount (if exists) */}
                                 {hasPromo && promoDiscount > 0 && (
                                     <tr>
-                                        <td >Promo Discount:</td>
+                                        <td>Promo Discount:</td>
                                         <td style={{ color: '#dc3545' }}>-{formatCurrency(promoDiscount)}</td>
                                     </tr>
                                 )}
 
-                                {/* 5. Loyalty Discount (if exists) */}
                                 {loyaltyDiscountAmount > 0 && (
                                     <tr>
                                         <td>Loyalty Discount ({loyaltyCoinsUsed || 0} coins):</td>
@@ -367,7 +389,6 @@ const InvoicePrint = ({ invoice }) => {
                                     </tr>
                                 )}
 
-                                {/* 6. Total Discount (sum of all discounts) */}
                                 {totalDiscountAmount > 0 && (
                                     <tr>
                                         <td><strong>Total Discount:</strong></td>
@@ -375,50 +396,31 @@ const InvoicePrint = ({ invoice }) => {
                                     </tr>
                                 )}
 
-                                {/* 7. Subtotal (After ALL discounts, BEFORE GST) */}
                                 <tr style={{ borderTop: '1px dashed #ddd' }}>
                                     <td><strong>Subtotal:</strong></td>
                                     <td><strong>{formatCurrency(subtotalAfterAllDiscounts)}</strong></td>
                                 </tr>
 
-                                {/* 8. GST */}
                                 <tr>
                                     <td><strong>GST ({gstRate || 18}%):</strong></td>
                                     <td><strong>{formatCurrency(gstAmount || 0)}</strong></td>
                                 </tr>
 
-                                {/* 9. Grand Total */}
                                 <tr className="grand-total">
                                     <td><strong>Grand Total:</strong></td>
                                     <td><strong>{formatCurrency(grandTotal || 0)}</strong></td>
                                 </tr>
-
-                                {/* ✅ Loyalty Coins Earned (At bottom) */}
-                                {/* {loyaltyCoinsEarned > 0 && (
-                                    <tr>
-                                        <td style={{ paddingTop: '10px', borderTop: '1px solid #ddd' }}>
-                                            <span style={{ fontSize: '12px', color: '#555' }}>🪙 Loyalty Coins Earned:</span>
-                                        </td>
-                                        <td style={{ paddingTop: '10px', borderTop: '1px solid #ddd', textAlign: 'right' }}>
-                                            <span style={{ color: '#28a745', fontWeight: 'bold' }}>+{loyaltyCoinsEarned} coins</span>
-                                        </td>
-                                    </tr>
-                                )} */}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* ============================================
-                    AMOUNT IN WORDS
-                ============================================ */}
+                {/* AMOUNT IN WORDS */}
                 <div className="amount-in-words">
                     <p><strong>Amount in Words:</strong> {numberToWords(grandTotal || 0)} Only</p>
                 </div>
 
-                {/* ============================================
-                    DECLARATION & TERMS
-                ============================================ */}
+                {/* DECLARATION & TERMS */}
                 <div className="declaration-terms-section">
                     <div className="declaration-section">
                         <h3>Declaration</h3>
@@ -430,9 +432,7 @@ const InvoicePrint = ({ invoice }) => {
                     </div>
                 </div>
 
-                {/* ============================================
-                    NOTES
-                ============================================ */}
+                {/* NOTES */}
                 {notes && (
                     <div className="notes-section">
                         <h3>Notes</h3>
@@ -440,9 +440,7 @@ const InvoicePrint = ({ invoice }) => {
                     </div>
                 )}
 
-                {/* ============================================
-                    FOOTER
-                ============================================ */}
+                {/* FOOTER */}
                 <div className="invoice-footer">
                     <div className="thank-you">
                         <p>Thank you for your business!</p>
