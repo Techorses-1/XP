@@ -32,7 +32,7 @@ function App() {
           <Routes>
             {/* ===== PUBLIC ROUTES ===== */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/logs" element={<Logs />} />
 
 

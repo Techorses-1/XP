@@ -87,6 +87,26 @@ const InvoiceDetailsModal = ({
 }) => {
     if (!show) return null;
 
+    // Normalize packages to array (handles old single packageItem too)
+    const normalizePackages = (inv) => {
+        if (!inv) return [];
+        if (inv.packageItems && inv.packageItems.length > 0) {
+            return inv.packageItems.map(p => {
+                const o = { ...p };
+                if (!o.quantity) o.quantity = 1;
+                return o;
+            });
+        }
+        if (inv.packageItem && inv.packageItem.packageId) {
+            const o = { ...inv.packageItem };
+            if (!o.quantity) o.quantity = 1;
+            return [o];
+        }
+        return [];
+    };
+
+    const packages = normalizePackages(invoice);
+
     return (
         <div className="inv-modal-overlay" onClick={onClose}>
             <div className="inv-modal-content inv-modal-lg" onClick={(e) => e.stopPropagation()}>
@@ -165,74 +185,77 @@ const InvoiceDetailsModal = ({
                                 </div>
                             )}
 
-                            {invoice.hasPackage && invoice.packageItem && (
-                                <div className="inv-details-section">
-                                    <h4><FaBoxOpen /> Package</h4>
-                                    <div className="inv-details-grid">
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Package</span>
-                                            <strong>{invoice.packageItem.packageName}</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Original Price</span>
-                                            <strong>₹{invoice.packageItem.pricing}</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Discount</span>
-                                            <strong>{invoice.packageItem.discount}%</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Discount Amount</span>
-                                            <strong className="inv-discount-amount">-₹{invoice.packageItem.discountAmount?.toFixed(2) || 0}</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Final Price</span>
-                                            <strong className="inv-final-price">₹{invoice.packageItem.finalPrice?.toFixed(2) || invoice.packageItem.pricing}</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Bottle Size</span>
-                                            <strong>{invoice.packageItem.bottleML}ml</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Oil Count</span>
-                                            <strong>{invoice.packageItem.oilCount}</strong>
-                                        </div>
-                                        <div className="inv-details-item">
-                                            <span className="inv-details-label">Fragrance Qty</span>
-                                            <strong>{invoice.packageItem.fragranceQty}ml</strong>
-                                        </div>
-                                    </div>
+                            {packages.length > 0 && (
+                                <>
+                                    {packages.map((pkg, pkgIdx) => (
+                                        <div className="inv-details-section" key={pkgIdx}>
+                                            <h4><FaBoxOpen /> Package {pkgIdx + 1}{packages.length > 1 ? ` of ${packages.length}` : ''}: {pkg.packageName}</h4>
+                                            <div className="inv-details-grid">
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Quantity</span>
+                                                    <strong>{pkg.quantity || 1}</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Original Price</span>
+                                                    <strong>₹{pkg.pricing}</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Discount</span>
+                                                    <strong>{pkg.discount}%</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Discount Amount</span>
+                                                    <strong className="inv-discount-amount">-₹{pkg.discountAmount?.toFixed(2) || 0}</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Final Price (per unit)</span>
+                                                    <strong className="inv-final-price">₹{pkg.finalPrice?.toFixed(2) || pkg.pricing}</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Bottle Size</span>
+                                                    <strong>{pkg.bottleML}ml</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Fragrance Qty</span>
+                                                    <strong>{pkg.fragranceQty}ml</strong>
+                                                </div>
+                                                <div className="inv-details-item">
+                                                    <span className="inv-details-label">Fragrance Base</span>
+                                                    <strong>{pkg.alcoholQty}ml</strong>
+                                                </div>
+                                            </div>
 
-                                    {/* ✅ Multiple XP Oils Display */}
-                                    {invoice.packageItem.xpOilItems && invoice.packageItem.xpOilItems.length > 0 && (
-                                        <div className="inv-details-xp-oils">
-                                            <h5><FaOilCan /> XP Oils Used</h5>
-                                            <table className="inv-details-xp-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Oil Name</th>
-                                                        <th>ML</th>
-                                                        <th>Density</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {invoice.packageItem.xpOilItems.map((oil, idx) => (
-                                                        <tr key={idx}>
-                                                            <td>{oil.productName}</td>
-                                                            <td>{oil.ml}ml</td>
-                                                            <td>{oil.density || 1000}</td>
-                                                        </tr>
-                                                    ))}
-                                                    <tr className="inv-details-xp-total">
-                                                        <td colSpan="1"><strong>Total Fragrance</strong></td>
-                                                        <td><strong>{invoice.packageItem.xpOilItems.reduce((sum, o) => sum + (o.ml || 0), 0)}ml</strong></td>
-                                                        <td></td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                            {pkg.xpOilItems && pkg.xpOilItems.length > 0 && (
+                                                <div className="inv-details-xp-oils">
+                                                    <h5><FaOilCan /> XP Oils Used</h5>
+                                                    <table className="inv-details-xp-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Oil Name</th>
+                                                                <th>ML</th>
+                                                                <th>Density</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {pkg.xpOilItems.map((oil, idx) => (
+                                                                <tr key={idx}>
+                                                                    <td>{oil.productName}</td>
+                                                                    <td>{oil.ml}ml</td>
+                                                                    <td>{oil.density || 1000}</td>
+                                                                </tr>
+                                                            ))}
+                                                            <tr className="inv-details-xp-total">
+                                                                <td colSpan="1"><strong>Total Fragrance</strong></td>
+                                                                <td><strong>{pkg.xpOilItems.reduce((sum, o) => sum + (o.ml || 0), 0)}ml</strong></td>
+                                                                <td></td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    ))}
+                                </>
                             )}
 
                             {invoice.hasDispenser && invoice.dispenserItems?.length > 0 && (
@@ -504,7 +527,6 @@ const Invoice = () => {
     const [workshops, setWorkshops] = useState([]);
     const [packages, setPackages] = useState([]);
     const [xpOils, setXpOils] = useState([]);
-    // ✅ KEPT: dispenserOils but populated from XP oils
     const [dispenserOils, setDispenserOils] = useState([]);
     const [promoCodes, setPromoCodes] = useState([]);
 
@@ -514,20 +536,27 @@ const Invoice = () => {
     const [newCustomerEmail, setNewCustomerEmail] = useState("");
     const [newCustomerContact, setNewCustomerContact] = useState("");
     const [selectedWorkshop, setSelectedWorkshop] = useState(null);
-    const [selectedPackage, setSelectedPackage] = useState(null);
+
+    // ✅ NEW: Multiple packages array
+    // Each item shape:
+    // {
+    //   lineId: string | null,          // backend-generated; null for new
+    //   tempId: string,                  // frontend-only React key
+    //   packageSelect: {value,label,data} | null,
+    //   quantity: number,
+    //   xpOilItems: [{ xpId, productName, ml, density, pricePerKG }],
+    //   fragranceBaseML: string,
+    //   discount: number,
+    //   // temp inputs for adding a new XP oil in this block:
+    //   xpOilSelect: {value,label,data} | null,
+    //   xpOilML: string,
+    // }
+    const [packageItems, setPackageItems] = useState([]);
 
     // ✅ Package Mode Toggle (Default: false = Workshop Mode)
     const [packageMode, setPackageMode] = useState(false);
 
-    // ✅ Multiple XP Oils state
-    const [xpOilItems, setXpOilItems] = useState([]);
-    const [xpOilSelect, setXpOilSelect] = useState(null);
-    const [xpOilML, setXpOilML] = useState("");
-
-    // ✅ XP Oil validation
-    const [xpOilTotalML, setXpOilTotalML] = useState(0);
-    const [xpOilValidationError, setXpOilValidationError] = useState("");
-
+    // ✅ Dispenser items (unchanged)
     const [dispenserItems, setDispenserItems] = useState([]);
     const [selectedPromo, setSelectedPromo] = useState(null);
     const [paymentStatus, setPaymentStatus] = useState("Cash");
@@ -542,10 +571,6 @@ const Invoice = () => {
     const [loyaltyCoinsEarned, setLoyaltyCoinsEarned] = useState(0);
     const [loyaltyDiscountAmount, setLoyaltyDiscountAmount] = useState(0);
 
-    // ========== PACKAGE DISCOUNT (EDITABLE) ==========
-    const [packageDiscountInput, setPackageDiscountInput] = useState(0);
-    // ========== FRAGRANCE BASE ML (EDITABLE) ==========
-    const [fragranceBaseML, setFragranceBaseML] = useState("");
     // ========== DISPENSER ADD FORM ==========
     const [dispenserSelect, setDispenserSelect] = useState(null);
     const [dispenserML, setDispenserML] = useState("");
@@ -554,11 +579,10 @@ const Invoice = () => {
     // ========== RECENT WORKSHOP ==========
     const [recentWorkshop, setRecentWorkshop] = useState(null);
 
-    // ========== CALCULATIONS WITH DISCOUNTS ==========
-    const [packageOriginalPrice, setPackageOriginalPrice] = useState(0);
-    const [packageDiscountPercent, setPackageDiscountPercent] = useState(0);
-    const [packageDiscountAmount, setPackageDiscountAmount] = useState(0);
-    const [packageFinalPrice, setPackageFinalPrice] = useState(0);
+    // ========== CALCULATIONS ==========
+    const [packageOriginalTotal, setPackageOriginalTotal] = useState(0);
+    const [packageDiscountTotal, setPackageDiscountTotal] = useState(0);
+    const [packageFinalTotal, setPackageFinalTotal] = useState(0);
 
     const [dispenserOriginalTotal, setDispenserOriginalTotal] = useState(0);
     const [dispenserDiscountTotal, setDispenserDiscountTotal] = useState(0);
@@ -577,7 +601,6 @@ const Invoice = () => {
     const [invoiceSearchTerm, setInvoiceSearchTerm] = useState("");
     const [hasLoadedInvoicesOnce, setHasLoadedInvoicesOnce] = useState(false);
 
-    // ✅ Filter states
     const [timeFilter, setTimeFilter] = useState("all");
     const [paymentFilter, setPaymentFilter] = useState("");
 
@@ -590,6 +613,25 @@ const Invoice = () => {
 
     // ========== GST RATE ==========
     const GST_RATE = 18;
+
+    // ============================================
+    // HELPER: new empty package block
+    // ============================================
+    const createEmptyPackageBlock = (packageData = null) => ({
+        lineId: null,
+        tempId: `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        packageSelect: packageData ? {
+            value: packageData.packageId,
+            label: packageData.packageName,
+            data: packageData
+        } : null,
+        quantity: 1,
+        xpOilItems: [],
+        fragranceBaseML: packageData ? String(packageData.alcoholQty || "") : "",
+        discount: packageData ? (packageData.discount || 0) : 0,
+        xpOilSelect: null,
+        xpOilML: ""
+    });
 
     // ============================================
     // FETCH DATA
@@ -633,24 +675,17 @@ const Invoice = () => {
 
     const fetchXPOils = async () => {
         try {
-            console.log("🔍 FETCHING XP OILS...");
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/xp/get-all?limit=1000&page=1`,
                 { credentials: 'include' }
             );
             if (!response.ok) throw new Error('Failed to fetch XP oils');
             const data = await response.json();
-            console.log("📦 RAW DATA FROM BACKEND:", data);
-
             const oils = data.products || [];
-
-
             setXpOils(oils);
-            // ✅ SHOW ALL XP OILS - NO FILTER
             setDispenserOils(oils);
-            console.log("✅ DISPENSER OILS SET:", oils.length);
         } catch (error) {
-            console.error("❌ Error fetching XP oils:", error);
+            console.error("Error fetching XP oils:", error);
             toast.error("Failed to fetch XP oils");
         }
     };
@@ -713,7 +748,6 @@ const Invoice = () => {
     // ============================================
     useEffect(() => {
         const autoSelectWorkshop = async () => {
-            // ✅ Skip if no customer or editing or packageMode is ON
             if (!selectedCustomer || isEditing || packageMode) return;
 
             const customerWorkshops = await fetchWorkshopsForCustomer(selectedCustomer.value);
@@ -752,10 +786,10 @@ const Invoice = () => {
     }, [selectedCustomer, isEditing, packageMode]);
 
     // ============================================
-    // ✅ AUTO SELECT PACKAGE FROM WORKSHOP (Only in Workshop Mode)
+    // ✅ AUTO-ADD WORKSHOP PACKAGE AS FIRST BLOCK
     // ============================================
     useEffect(() => {
-        if (selectedWorkshop && selectedCustomer && !packageMode) {
+        if (selectedWorkshop && selectedCustomer && !packageMode && !isEditing) {
             const customerInWorkshop = selectedWorkshop.data.customers?.find(
                 c => c.customerId === selectedCustomer.value
             );
@@ -763,53 +797,25 @@ const Invoice = () => {
             if (customerInWorkshop && customerInWorkshop.packageId) {
                 const foundPackage = packages.find(p => p.packageId === customerInWorkshop.packageId);
                 if (foundPackage) {
-                    setSelectedPackage({
-                        value: foundPackage.packageId,
-                        label: foundPackage.packageName,
-                        data: foundPackage
+                    // Only auto-add if the array is empty OR has just one block that's the same workshop package
+                    setPackageItems(prev => {
+                        if (prev.length === 0) {
+                            return [createEmptyPackageBlock(foundPackage)];
+                        }
+                        // If already has workshop package as first block, don't touch
+                        if (prev[0]?.packageSelect?.value === foundPackage.packageId) {
+                            return prev;
+                        }
+                        // Otherwise leave the array as user has it
+                        return prev;
                     });
-                    setPackageDiscountInput(foundPackage.discount || 0);
                 }
             }
         }
-    }, [selectedWorkshop, selectedCustomer, packages, packageMode]);
+    }, [selectedWorkshop, selectedCustomer, packages, packageMode, isEditing]);
 
     // ============================================
-    // ✅ TRACK XP OIL TOTAL (NO MATCH VALIDATION)
-    // ============================================
-    useEffect(() => {
-        if (selectedPackage) {
-            const totalML = xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0);
-            setXpOilTotalML(totalML);
-
-            if (xpOilItems.length === 0) {
-                setXpOilValidationError("Please add at least one XP Oil");
-            } else {
-                setXpOilValidationError("");
-            }
-        } else {
-            setXpOilTotalML(0);
-            setXpOilValidationError("");
-        }
-    }, [xpOilItems, selectedPackage]);
-
-    // ============================================
-    // ✅ AUTO-FILL FRAGRANCE BASE ML WHEN PACKAGE SELECTED
-    // ============================================
-    useEffect(() => {
-        if (selectedPackage) {
-            const defaultML = selectedPackage.data?.alcoholQty || 0;
-            setFragranceBaseML(defaultML.toString());
-        } else {
-            setFragranceBaseML("");
-        }
-    }, [selectedPackage]);
-
-    // ============================================
-    // CUSTOMER SELECTION - Fetch Loyalty Coins
-    // ============================================
-    // ============================================
-    // ✅ AUTO-FILL NEW CUSTOMER FIELDS WHEN CUSTOMER SELECTED
+    // CUSTOMER SELECTION - Auto-fill new customer fields
     // ============================================
     useEffect(() => {
         if (selectedCustomer) {
@@ -849,25 +855,30 @@ const Invoice = () => {
     }, [selectedCustomer, customers]);
 
     // ============================================
-    // CALCULATE TOTALS WITH DISCOUNTS AND LOYALTY
+    // CALCULATE TOTALS (loops through all packages)
     // ============================================
     useEffect(() => {
-        let pkgOriginal = 0;
-        let pkgDiscountPercent = 0;
-        let pkgDiscountAmt = 0;
-        let pkgFinal = 0;
+        let pkgOriginalTotal = 0;
+        let pkgDiscountTotal = 0;
+        let pkgFinalTotal = 0;
 
-        if (selectedPackage) {
-            pkgOriginal = selectedPackage.data.pricing || 0;
-            pkgDiscountPercent = packageDiscountInput || selectedPackage.data.discount || 0;
-            pkgDiscountAmt = (pkgOriginal * pkgDiscountPercent) / 100;
-            pkgFinal = pkgOriginal - pkgDiscountAmt;
+        for (const block of packageItems) {
+            const pkg = block.packageSelect?.data;
+            if (!pkg) continue;
+            const qty = parseInt(block.quantity) || 1;
+            const discountPercent = block.discount || 0;
+            const originalUnit = pkg.pricing || 0;
+            const discountUnit = (originalUnit * discountPercent) / 100;
+            const finalUnit = originalUnit - discountUnit;
+
+            pkgOriginalTotal += originalUnit * qty;
+            pkgDiscountTotal += discountUnit * qty;
+            pkgFinalTotal += finalUnit * qty;
         }
 
-        setPackageOriginalPrice(pkgOriginal);
-        setPackageDiscountPercent(pkgDiscountPercent);
-        setPackageDiscountAmount(pkgDiscountAmt);
-        setPackageFinalPrice(pkgFinal);
+        setPackageOriginalTotal(pkgOriginalTotal);
+        setPackageDiscountTotal(pkgDiscountTotal);
+        setPackageFinalTotal(pkgFinalTotal);
 
         let dispOriginalTotal = 0;
         let dispDiscountTotal = 0;
@@ -890,7 +901,7 @@ const Invoice = () => {
         setDispenserDiscountTotal(dispDiscountTotal);
         setDispenserFinalTotal(dispFinalTotal);
 
-        const subtotalWithGST = pkgFinal + dispFinalTotal;
+        const subtotalWithGST = pkgFinalTotal + dispFinalTotal;
         setSubtotal(subtotalWithGST);
 
         const subtotalWithoutGSTCalc = subtotalWithGST / (1 + GST_RATE / 100);
@@ -928,13 +939,13 @@ const Invoice = () => {
         const finalAmount = afterPromo - loyaltyDiscountAmt;
         const gst = finalAmount * (GST_RATE / 100);
         const grand = finalAmount + gst;
-        const totalDiscountAmt = pkgDiscountAmt + dispDiscountTotal + promoDiscountAmt + loyaltyDiscountAmt;
+        const totalDiscountAmt = pkgDiscountTotal + dispDiscountTotal + promoDiscountAmt + loyaltyDiscountAmt;
 
         setGstAmount(gst);
         setTotalDiscount(totalDiscountAmt);
         setGrandTotal(grand);
 
-    }, [selectedPackage, packageDiscountInput, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
+    }, [packageItems, dispenserItems, selectedPromo, useLoyaltyCoins, usableLoyaltyCoins, isEditing, GST_RATE]);
 
     // ============================================
     // REFETCH INVOICES WHEN FILTERS CHANGE (LIST VIEW)
@@ -946,12 +957,11 @@ const Invoice = () => {
     }, [timeFilter, paymentFilter]);
 
     // ============================================
-    // HANDLE WORKSHOP SELECTION (EDIT MODE)
+    // HANDLE WORKSHOP SELECTION
     // ============================================
     const handleWorkshopChange = (selected) => {
         if (!selected) {
             setSelectedWorkshop(null);
-            setSelectedPackage(null);
             return;
         }
 
@@ -976,14 +986,10 @@ const Invoice = () => {
         setPackageMode(newState);
 
         if (newState) {
-            // ✅ Package Mode ON - Hide workshop, enable manual package selection
             setSelectedWorkshop(null);
-            setSelectedPackage(null);
             setRecentWorkshop(null);
-            setPackageDiscountInput(0);
-            toast.info("Package Mode enabled. You can manually select package.");
+            toast.info("Package Mode enabled. You can manually add packages.");
         } else {
-            // ✅ Workshop Mode ON - Show workshop, auto-select
             toast.info("Workshop Mode enabled.");
             if (selectedCustomer) {
                 const autoSelect = async () => {
@@ -1005,75 +1011,148 @@ const Invoice = () => {
     };
 
     // ============================================
-    // ✅ HANDLE ADD XP OIL
+    // ✅ ADD NEW PACKAGE BLOCK
     // ============================================
-    const handleAddXPOil = () => {
-        if (!xpOilSelect) {
-            toast.error("Please select an XP Oil");
-            return;
-        }
-
-        if (!xpOilML || parseFloat(xpOilML) <= 0) {
-            toast.error("Please enter a valid ML quantity (greater than 0)");
-            return;
-        }
-
-        const ml = parseFloat(xpOilML);
-        const tolerance = 0.01;
-
-        const exists = xpOilItems.some(
-            item => item.xpId === xpOilSelect.value
-        );
-
-        if (exists) {
-            toast.error("This XP Oil is already added");
-            return;
-        }
-
-
-
-        const newItem = {
-            xpId: xpOilSelect.value,
-            productName: xpOilSelect.label,
-            ml: ml,
-            density: xpOilSelect.data?.density || 1000,
-            pricePerKG: xpOilSelect.data?.avgPurchasePrice || 0
-        };
-
-        setXpOilItems([...xpOilItems, newItem]);
-        setXpOilSelect(null);
-        setXpOilML("");
-
-        toast.success(`Added ${newItem.productName} (${ml}ml)`);
+    const handleAddPackageBlock = () => {
+        setPackageItems(prev => [...prev, createEmptyPackageBlock()]);
     };
 
     // ============================================
-    // ✅ HANDLE REMOVE XP OIL
+    // ✅ REMOVE PACKAGE BLOCK
     // ============================================
-    const handleRemoveXPOil = (index) => {
-        const removed = xpOilItems[index];
-        const newItems = xpOilItems.filter((_, i) => i !== index);
-        setXpOilItems(newItems);
-        toast.info(`Removed ${removed.productName}`);
+    const handleRemovePackageBlock = (tempId) => {
+        setPackageItems(prev => prev.filter(b => b.tempId !== tempId));
     };
 
     // ============================================
-    // ✅ HANDLE UPDATE XP OIL ML
+    // ✅ UPDATE PACKAGE BLOCK — package select
     // ============================================
-    const handleUpdateXPOilML = (index, newML) => {
+    const handleUpdatePackageSelect = (tempId, selected) => {
+        setPackageItems(prev => prev.map(b => {
+            if (b.tempId !== tempId) return b;
+            // Reset XP oils & fragrance base when package changes
+            const newBlock = {
+                ...b,
+                packageSelect: selected,
+                xpOilItems: [],
+                xpOilSelect: null,
+                xpOilML: "",
+                fragranceBaseML: selected?.data?.alcoholQty ? String(selected.data.alcoholQty) : "",
+                discount: selected?.data?.discount || 0
+            };
+            return newBlock;
+        }));
+    };
+
+    // ============================================
+    // ✅ UPDATE PACKAGE BLOCK — quantity
+    // ============================================
+    const handleUpdatePackageQuantity = (tempId, newQty) => {
+        const qty = parseInt(newQty);
+        if (isNaN(qty) || qty < 1) return;
+        setPackageItems(prev => prev.map(b => b.tempId === tempId ? { ...b, quantity: qty } : b));
+    };
+
+    // ============================================
+    // ✅ UPDATE PACKAGE BLOCK — discount
+    // ============================================
+    const handleUpdatePackageDiscount = (tempId, newDiscount) => {
+        const d = Math.min(100, Math.max(0, parseFloat(newDiscount) || 0));
+        setPackageItems(prev => prev.map(b => b.tempId === tempId ? { ...b, discount: d } : b));
+    };
+
+    // ============================================
+    // ✅ UPDATE PACKAGE BLOCK — fragrance base ML
+    // ============================================
+    const handleUpdatePackageFragranceBase = (tempId, newVal) => {
+        setPackageItems(prev => prev.map(b => b.tempId === tempId ? { ...b, fragranceBaseML: newVal } : b));
+    };
+
+    // ============================================
+    // ✅ UPDATE PACKAGE BLOCK — XP oil select
+    // ============================================
+    const handleUpdatePackageXPOilSelect = (tempId, selected) => {
+        setPackageItems(prev => prev.map(b => b.tempId === tempId ? { ...b, xpOilSelect: selected } : b));
+    };
+
+    // ============================================
+    // ✅ UPDATE PACKAGE BLOCK — XP oil ML input
+    // ============================================
+    const handleUpdatePackageXPOilML = (tempId, val) => {
+        setPackageItems(prev => prev.map(b => b.tempId === tempId ? { ...b, xpOilML: val } : b));
+    };
+
+    // ============================================
+    // ✅ ADD XP OIL TO A PACKAGE BLOCK
+    // ============================================
+    const handleAddXPOilToPackage = (tempId) => {
+        setPackageItems(prev => prev.map(b => {
+            if (b.tempId !== tempId) return b;
+
+            if (!b.xpOilSelect) {
+                toast.error("Please select an XP Oil");
+                return b;
+            }
+            if (!b.xpOilML || parseFloat(b.xpOilML) <= 0) {
+                toast.error("Please enter valid ML (> 0)");
+                return b;
+            }
+            const ml = parseFloat(b.xpOilML);
+
+            const exists = b.xpOilItems.some(x => x.xpId === b.xpOilSelect.value);
+            if (exists) {
+                toast.error("This XP Oil is already added to this package");
+                return b;
+            }
+
+            const newItem = {
+                xpId: b.xpOilSelect.value,
+                productName: b.xpOilSelect.label,
+                ml: ml,
+                density: b.xpOilSelect.data?.density || 1000,
+                pricePerKG: b.xpOilSelect.data?.avgPurchasePrice || 0
+            };
+
+            toast.success(`Added ${newItem.productName} (${ml}ml)`);
+
+            return {
+                ...b,
+                xpOilItems: [...b.xpOilItems, newItem],
+                xpOilSelect: null,
+                xpOilML: ""
+            };
+        }));
+    };
+
+    // ============================================
+    // ✅ REMOVE XP OIL FROM A PACKAGE BLOCK
+    // ============================================
+    const handleRemoveXPOilFromPackage = (tempId, xpIndex) => {
+        setPackageItems(prev => prev.map(b => {
+            if (b.tempId !== tempId) return b;
+            return { ...b, xpOilItems: b.xpOilItems.filter((_, i) => i !== xpIndex) };
+        }));
+    };
+
+    // ============================================
+    // ✅ UPDATE XP OIL ML IN A PACKAGE BLOCK
+    // ============================================
+    const handleUpdateXPOilMLInPackage = (tempId, xpIndex, newML) => {
         const ml = parseFloat(newML);
         if (isNaN(ml) || ml <= 0) {
             toast.error("ML must be greater than 0");
             return;
         }
-
-        const updatedItems = [...xpOilItems];
-        updatedItems[index].ml = ml;
-        setXpOilItems(updatedItems);
+        setPackageItems(prev => prev.map(b => {
+            if (b.tempId !== tempId) return b;
+            const updated = [...b.xpOilItems];
+            updated[xpIndex] = { ...updated[xpIndex], ml };
+            return { ...b, xpOilItems: updated };
+        }));
     };
 
     // ============================================
-    // ✅ HANDLE ADD DISPENSER ITEM - UPDATED TO USE XP ID
+    // ✅ HANDLE ADD DISPENSER ITEM
     // ============================================
     const handleAddDispenser = () => {
         if (!dispenserSelect) {
@@ -1095,7 +1174,6 @@ const Invoice = () => {
         const qty = parseInt(dispenserQty);
         const totalML = ml * qty;
 
-        // ✅ CHANGED: Use xpId instead of dispenserId
         const exists = dispenserItems.some(
             item => item.xpId === dispenserSelect.value && item.ml === ml
         );
@@ -1105,13 +1183,12 @@ const Invoice = () => {
             return;
         }
 
-        // ✅ CHANGED: Get selling prices from XP oil data
         const defaultUnitPrice = ml === 3 ? dispenserSelect.data?.sellingPrice3ml : dispenserSelect.data?.sellingPrice6ml;
 
         setDispenserItems([
             ...dispenserItems,
             {
-                xpId: dispenserSelect.value,  // ✅ CHANGED: Store xpId
+                xpId: dispenserSelect.value,
                 productName: dispenserSelect.label,
                 ml: ml,
                 quantity: qty,
@@ -1119,7 +1196,7 @@ const Invoice = () => {
                 unitPrice: defaultUnitPrice || 0,
                 sellingPrice3ml: dispenserSelect.data?.sellingPrice3ml || 0,
                 sellingPrice6ml: dispenserSelect.data?.sellingPrice6ml || 0,
-                discount: 0  // ✅ Always 0 by default
+                discount: 0
             }
         ]);
 
@@ -1130,9 +1207,6 @@ const Invoice = () => {
         toast.success("Dispenser item added");
     };
 
-    // ============================================
-    // ✅ HANDLE UPDATE DISPENSER UNIT PRICE
-    // ============================================
     const handleUpdateDispenserUnitPrice = (index, newUnitPrice) => {
         const updatedItems = [...dispenserItems];
         const unitPrice = parseFloat(newUnitPrice);
@@ -1142,17 +1216,11 @@ const Invoice = () => {
         }
     };
 
-    // ============================================
-    // HANDLE REMOVE DISPENSER ITEM
-    // ============================================
     const handleRemoveDispenser = (index) => {
         const newItems = dispenserItems.filter((_, i) => i !== index);
         setDispenserItems(newItems);
     };
 
-    // ============================================
-    // HANDLE UPDATE DISPENSER DISCOUNT
-    // ============================================
     const handleUpdateDispenserDiscount = (index, newDiscount) => {
         const updatedItems = [...dispenserItems];
         const discount = Math.min(100, Math.max(0, parseFloat(newDiscount) || 0));
@@ -1160,9 +1228,6 @@ const Invoice = () => {
         setDispenserItems(updatedItems);
     };
 
-    // ============================================
-    // HANDLE UPDATE DISPENSER ML
-    // ============================================
     const handleUpdateDispenserML = (index, newMl) => {
         const updatedItems = [...dispenserItems];
         const ml = parseInt(newMl);
@@ -1177,9 +1242,6 @@ const Invoice = () => {
         }
     };
 
-    // ============================================
-    // HANDLE UPDATE DISPENSER QUANTITY
-    // ============================================
     const handleUpdateDispenserQuantity = (index, newQty) => {
         const updatedItems = [...dispenserItems];
         const qty = parseInt(newQty);
@@ -1193,25 +1255,16 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE ADD & CLOSE WORKSHOP/PACKAGE
+    // HANDLE CLEAR
     // ============================================
     const handleAddAndCloseWorkshop = () => {
         setSelectedWorkshop(null);
-        setSelectedPackage(null);
-        setXpOilItems([]);
-        setXpOilSelect(null);
-        setXpOilML("");
-        setXpOilTotalML(0);
-        setXpOilValidationError("");
+        setPackageItems([]);
         setRecentWorkshop(null);
-        setPackageDiscountInput(0);
         setPackageMode(false);
-        toast.info("Workshop & Package selections cleared");
+        toast.info("Workshop & Packages cleared");
     };
 
-    // ============================================
-    // HANDLE CLOSE DISPENSER
-    // ============================================
     const handleCloseDispenser = () => {
         setDispenserItems([]);
         setDispenserSelect(null);
@@ -1318,9 +1371,6 @@ const Invoice = () => {
         setShowConfirmation(true);
     };
 
-    // ============================================
-    // HANDLE CONFIRMATION
-    // ============================================
     const handleConfirmation = async () => {
         if (confirmationConfig.onConfirm) {
             setIsConfirming(true);
@@ -1338,7 +1388,31 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE CREATE INVOICE - UPDATED PAYLOAD
+    // VALIDATE PACKAGE BLOCKS (returns error msg or null)
+    // ============================================
+    const validatePackageBlocks = () => {
+        for (let i = 0; i < packageItems.length; i++) {
+            const b = packageItems[i];
+            const label = `Package ${i + 1}`;
+
+            if (!b.packageSelect) {
+                return `${label}: please select a package`;
+            }
+            if (!b.quantity || b.quantity < 1) {
+                return `${label}: quantity must be at least 1`;
+            }
+            if (!b.xpOilItems || b.xpOilItems.length === 0) {
+                return `${label}: at least one XP Oil is required`;
+            }
+            if (!b.fragranceBaseML || parseFloat(b.fragranceBaseML) <= 0) {
+                return `${label}: Fragrance Base ML must be greater than 0`;
+            }
+        }
+        return null;
+    };
+
+    // ============================================
+    // HANDLE CREATE INVOICE
     // ============================================
     const handleCreateInvoice = async () => {
         try {
@@ -1363,18 +1437,14 @@ const Invoice = () => {
                 }
             }
 
-            if (!selectedPackage && dispenserItems.length === 0) {
+            if (packageItems.length === 0 && dispenserItems.length === 0) {
                 toast.error("Please add a package or dispenser items");
                 return;
             }
 
-            if (selectedPackage && xpOilItems.length === 0) {
-                toast.error("Please add at least one XP Oil for the package");
-                return;
-            }
-
-            if (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0)) {
-                toast.error("Please enter a valid Fragrance Base ML (greater than 0)");
+            const pkgError = validatePackageBlocks();
+            if (pkgError) {
+                toast.error(pkgError);
                 return;
             }
 
@@ -1388,16 +1458,16 @@ const Invoice = () => {
                     contactNumber: newCustomerContact.trim()
                 } : null,
                 workshopId: packageMode ? null : (selectedWorkshop?.value || null),
-                packageId: selectedPackage?.value || null,
-                xpOilItems: xpOilItems.map(item => ({
-                    xpId: item.xpId,
-                    ml: item.ml
+                packageItems: packageItems.map(b => ({
+                    lineId: b.lineId || undefined,
+                    packageId: b.packageSelect.value,
+                    quantity: parseInt(b.quantity) || 1,
+                    xpOilItems: b.xpOilItems.map(x => ({ xpId: x.xpId, ml: x.ml })),
+                    fragranceBaseML: parseFloat(b.fragranceBaseML) || 0,
+                    discount: b.discount || 0
                 })),
-                fragranceBaseML: parseFloat(fragranceBaseML) || 0,
-                packageDiscount: packageDiscountInput || 0,
-                // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
-                    xpId: item.xpId,  // ✅ CHANGED
+                    xpId: item.xpId,
                     ml: item.ml,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice || 0,
@@ -1449,7 +1519,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // HANDLE UPDATE INVOICE - UPDATED PAYLOAD
+    // HANDLE UPDATE INVOICE
     // ============================================
     const handleUpdateInvoice = async () => {
         try {
@@ -1463,34 +1533,30 @@ const Invoice = () => {
                 return;
             }
 
-            if (!selectedPackage && dispenserItems.length === 0) {
+            if (packageItems.length === 0 && dispenserItems.length === 0) {
                 toast.error("Please add a package or dispenser items");
                 return;
             }
 
-            if (selectedPackage && xpOilItems.length === 0) {
-                toast.error("Please add at least one XP Oil for the package");
-                return;
-            }
-
-            if (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0)) {
-                toast.error("Please enter a valid Fragrance Base ML (greater than 0)");
+            const pkgError = validatePackageBlocks();
+            if (pkgError) {
+                toast.error(pkgError);
                 return;
             }
 
             setIsUpdating(true);
 
             const payload = {
-                packageId: selectedPackage?.value || null,
-                xpOilItems: xpOilItems.map(item => ({
-                    xpId: item.xpId,
-                    ml: item.ml
+                packageItems: packageItems.map(b => ({
+                    lineId: b.lineId || undefined,  // CRITICAL for smart diff
+                    packageId: b.packageSelect.value,
+                    quantity: parseInt(b.quantity) || 1,
+                    xpOilItems: b.xpOilItems.map(x => ({ xpId: x.xpId, ml: x.ml })),
+                    fragranceBaseML: parseFloat(b.fragranceBaseML) || 0,
+                    discount: b.discount || 0
                 })),
-                fragranceBaseML: parseFloat(fragranceBaseML) || 0,
-                packageDiscount: packageDiscountInput || 0,
-                // ✅ CHANGED: Send xpId instead of dispenserId
                 dispenserItems: dispenserItems.map(item => ({
-                    xpId: item.xpId,  // ✅ CHANGED
+                    xpId: item.xpId,
                     ml: item.ml,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice || 0,
@@ -1589,20 +1655,13 @@ const Invoice = () => {
         setNewCustomerEmail("");
         setNewCustomerContact("");
         setSelectedWorkshop(null);
-        setSelectedPackage(null);
-        setXpOilItems([]);
-        setXpOilSelect(null);
-        setXpOilML("");
-        setXpOilTotalML(0);
-        setXpOilValidationError("");
+        setPackageItems([]);
         setDispenserItems([]);
         setSelectedPromo(null);
         setPaymentStatus("Cash");
         setNotes("");
 
         setInvoiceDate(new Date().toISOString().split('T')[0]);
-        setPackageDiscountInput(0);
-        setFragranceBaseML("");
         setRecentWorkshop(null);
 
         setUseLoyaltyCoins(false);
@@ -1661,23 +1720,13 @@ const Invoice = () => {
         }
     };
 
-    // ============================================
-    // HANDLE FILTER CHANGE
-    // ============================================
-    const handleFilterChange = () => {
-        fetchAllInvoices();
-    };
-
-    // ============================================
-    // HANDLE SEARCH
-    // ============================================
     const handleSearch = (value) => {
         setInvoiceSearchTerm(value);
         fetchAllInvoices();
     };
 
     // ============================================
-    // HANDLE EDIT INVOICE - Load data into form - UPDATED
+    // HANDLE EDIT INVOICE - Load data into form
     // ============================================
     const handleEditInvoice = async (invoiceId) => {
         try {
@@ -1722,6 +1771,7 @@ const Invoice = () => {
                     endTime: invoice.workshop.endTime,
                     customers: []
                 }]);
+                setPackageMode(false);
             } else {
                 const customerWorkshops = await fetchWorkshopsForCustomer(invoice.customer.customerId);
                 const availableWorkshops = customerWorkshops.filter(w => {
@@ -1733,53 +1783,78 @@ const Invoice = () => {
                 setWorkshops(availableWorkshops);
                 setSelectedWorkshop(null);
                 setRecentWorkshop(null);
-                setPackageMode(true); // ✅ Enable package mode for edit mode if no workshop
+                setPackageMode(true);
             }
 
-            if (invoice.hasPackage && invoice.packageItem) {
-                const pkg = invoice.packageItem;
-                setSelectedPackage({
-                    value: pkg.packageId,
-                    label: pkg.packageName,
-                    data: {
-                        packageId: pkg.packageId,
-                        packageName: pkg.packageName,
-                        pricing: pkg.pricing,
-                        oilCount: pkg.oilCount,
-                        discount: pkg.discount,
-                        bottleML: pkg.bottleML,
-                        fillingLevel: pkg.fillingLevel,
-                        fragranceQty: pkg.fragranceQty,
-                        alcoholQty: pkg.alcoholQty
-                    }
+            // Normalize packages to array
+            let incomingPackages = [];
+            if (invoice.packageItems && invoice.packageItems.length > 0) {
+                incomingPackages = invoice.packageItems.map(p => {
+                    const o = { ...p };
+                    if (!o.quantity) o.quantity = 1;
+                    return o;
                 });
-                setPackageDiscountInput(pkg.discount || 0);
-                setFragranceBaseML((pkg.alcoholQty || 0).toString());
+            } else if (invoice.packageItem && invoice.packageItem.packageId) {
+                const o = { ...invoice.packageItem };
+                if (!o.quantity) o.quantity = 1;
+                incomingPackages = [o];
+            }
 
-                if (pkg.xpOilItems && pkg.xpOilItems.length > 0) {
-                    const loadedItems = pkg.xpOilItems.map(item => ({
-                        xpId: item.xpId,
-                        productName: item.productName,
-                        ml: item.ml,
-                        density: item.density || 1000,
-                        pricePerKG: item.pricePerKG || 0
-                    }));
-                    setXpOilItems(loadedItems);
-                } else if (pkg.xpOil && pkg.xpOil.xpId) {
-                    setXpOilItems([{
+            const loadedBlocks = incomingPackages.map(pkg => {
+                const foundPackage = packages.find(p => p.packageId === pkg.packageId) || {
+                    packageId: pkg.packageId,
+                    packageName: pkg.packageName,
+                    pricing: pkg.pricing,
+                    oilCount: pkg.oilCount,
+                    discount: pkg.discount,
+                    bottleML: pkg.bottleML,
+                    fillingLevel: pkg.fillingLevel,
+                    fragranceQty: pkg.fragranceQty,
+                    alcoholQty: pkg.alcoholQty
+                };
+
+                const loadedXP = (pkg.xpOilItems || []).map(item => ({
+                    xpId: item.xpId,
+                    productName: item.productName,
+                    ml: item.ml,
+                    density: item.density || 1000,
+                    pricePerKG: item.pricePerKG || 0
+                }));
+
+                // Fallback for very old invoices with single xpOil
+                if (loadedXP.length === 0 && pkg.xpOil && pkg.xpOil.xpId) {
+                    loadedXP.push({
                         xpId: pkg.xpOil.xpId,
                         productName: pkg.xpOil.productName,
                         ml: (pkg.xpOil.quantity || 0) * 1000,
                         density: pkg.xpOil.density || 1000,
                         pricePerKG: 0
-                    }]);
+                    });
                 }
-            }
 
-            // ✅ UPDATED: Load dispenser items with xpId
+                return {
+                    lineId: pkg.lineId || null,
+                    tempId: `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    packageSelect: {
+                        value: foundPackage.packageId,
+                        label: foundPackage.packageName,
+                        data: foundPackage
+                    },
+                    quantity: pkg.quantity || 1,
+                    xpOilItems: loadedXP,
+                    fragranceBaseML: String(pkg.alcoholQty || 0),
+                    discount: pkg.discount || 0,
+                    xpOilSelect: null,
+                    xpOilML: ""
+                };
+            });
+
+            setPackageItems(loadedBlocks);
+
+            // Load dispenser items
             if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
                 const items = invoice.dispenserItems.map(item => ({
-                    xpId: item.xpId,  // ✅ CHANGED: Use xpId
+                    xpId: item.xpId,
                     productName: item.productName,
                     ml: item.ml,
                     quantity: item.quantity,
@@ -1850,7 +1925,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // FETCH SINGLE INVOICE & OPEN DETAILS MODAL
+    // VIEW/DELETE/EXPORT
     // ============================================
     const handleViewInvoice = async (invoiceId) => {
         try {
@@ -1875,17 +1950,11 @@ const Invoice = () => {
         }
     };
 
-    // ============================================
-    // OPEN DELETE MODAL
-    // ============================================
     const handleDeleteClick = (invoice) => {
         setDeletingInvoice(invoice);
         setShowDeleteModal(true);
     };
 
-    // ============================================
-    // HANDLE EXPORT ALL INVOICES
-    // ============================================
     const handleExportAll = async () => {
         try {
             setIsExportingAll(true);
@@ -2007,9 +2076,6 @@ const Invoice = () => {
         return 'inv-status-default';
     };
 
-    // ============================================
-    // FILTERED INVOICES
-    // ============================================
     const filteredInvoices = allInvoices;
 
     // ============================================
@@ -2098,7 +2164,7 @@ const Invoice = () => {
     };
 
     // ============================================
-    // OPTION FORMATTERS - UPDATED DISPENSER OPTIONS
+    // OPTION FORMATTERS
     // ============================================
     const customerOptions = customers.map(c => ({
         value: c.customerId,
@@ -2118,8 +2184,6 @@ const Invoice = () => {
         data: o
     }));
 
-
-
     const dispenserOptions = dispenserOils.map(o => {
         return {
             value: o.xpId,
@@ -2127,7 +2191,6 @@ const Invoice = () => {
             data: o
         };
     });
-
 
     const promoOptions = promoCodes.map(p => ({
         value: p.promoId,
@@ -2260,14 +2323,13 @@ const Invoice = () => {
                             </div>
                         </div>
 
-                        {/* SECTION 2: WORKSHOP & PACKAGE - WITH PACKAGE MODE TOGGLE */}
+                        {/* SECTION 2: WORKSHOP & PACKAGES */}
                         <div className="inv-section inv-workshop-section">
                             <div className="inv-section-header-with-actions">
                                 <h3 className="inv-section-title">
-                                    <FaBoxOpen /> Workshop &amp; Package
+                                    <FaBoxOpen /> Workshop &amp; Packages
                                 </h3>
                                 <div className="inv-section-actions">
-                                    {/* ✅ Package Mode Toggle */}
                                     <button
                                         className={`inv-package-mode-btn ${packageMode ? 'inv-package-active' : ''}`}
                                         onClick={handlePackageModeToggle}
@@ -2288,7 +2350,7 @@ const Invoice = () => {
                                 </div>
                             </div>
 
-                            {/* ✅ Workshop Select - HIDDEN when Package Mode is ON, DISABLED when visible */}
+                            {/* Workshop Select */}
                             {!packageMode && selectedCustomer && (
                                 <div className="inv-form-row">
                                     <div className="inv-form-field">
@@ -2310,14 +2372,13 @@ const Invoice = () => {
                                         )}
                                         {workshops.length === 0 && (
                                             <small className="inv-hint inv-warning-hint">
-                                                ⚠️ No workshops found. Switch to "Package Mode" to manually select package.
+                                                ⚠️ No workshops found. Switch to "Package Mode" to manually select packages.
                                             </small>
                                         )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* ✅ Package Mode Info */}
                             {packageMode && (
                                 <div className="inv-package-mode-info">
                                     <small className="inv-hint inv-package-hint">
@@ -2326,233 +2387,225 @@ const Invoice = () => {
                                 </div>
                             )}
 
-                            {/* ✅ Package Select - DISABLED in Workshop Mode, ENABLED in Package Mode */}
-                            <div className="inv-form-row">
-                                <div className="inv-form-field">
-                                    <label>Select Package</label>
-                                    <Select
-                                        options={packageOptions}
-                                        value={selectedPackage}
-                                        onChange={setSelectedPackage}
-                                        placeholder={!packageMode && selectedWorkshop ? "Package auto-selected" : "Select a package"}
-                                        isClearable
-                                        styles={customSelectStyles}
-                                        noOptionsMessage={() => "No active packages found"}
-                                        isDisabled={!packageMode}
-                                    />
-                                    {!packageMode && selectedPackage && (
-                                        <small className="inv-hint">
-                                            Package auto-selected from workshop: {selectedPackage.label}
-                                        </small>
-                                    )}
-                                    {packageMode && selectedPackage && (
-                                        <small className="inv-hint">
-                                            Package manually selected: {selectedPackage.label}
-                                        </small>
-                                    )}
-                                    {isEditing && selectedPackage && (
-                                        <small className="inv-hint">Package cannot be changed in edit mode</small>
-                                    )}
-                                    {selectedPackage && (
-                                        <small className="inv-hint">
-                                            ML: {selectedPackage.data?.bottleML}ml | Oils: {selectedPackage.data?.oilCount} |
-                                            Fragrance: {selectedPackage.data?.fragranceQty}g | Fragrance Base: {selectedPackage.data?.alcoholQty}ml
-                                        </small>
-                                    )}
-                                    {!packageMode && workshops.length === 0 && !selectedPackage && (
-                                        <small className="inv-hint inv-warning-hint">
-                                            ⚠️ No workshops found. Switch to "Package Mode" to manually select package.
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
+                            {/* ✅ PACKAGES LIST */}
+                            {packageItems.length > 0 && (
+                                <div className="inv-packages-list">
+                                    {packageItems.map((block, pkgIdx) => (
+                                        <div className="inv-package-block" key={block.tempId}>
 
-                            {selectedPackage && (
-                                <div className="inv-form-row">
-                                    <div className="inv-form-field">
-                                        <label><FaPercentage /> Package Discount (%)</label>
-                                        <div className="inv-discount-input-group">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                step="0.01"
-                                                value={packageDiscountInput}
-                                                onChange={(e) => setPackageDiscountInput(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                                                className="inv-discount-input-full"
-                                                disabled={!selectedPackage}
-                                            />
-                                            <span className="inv-discount-percent-label">%</span>
-                                        </div>
-                                        <small className="inv-hint">Enter discount percentage for this package</small>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ✅ SECTION: MULTIPLE XP OILS */}
-                            {selectedPackage && (
-                                <div className="inv-section inv-xp-oil-section">
-                                    <div className="inv-section-header-with-actions">
-                                        <h4 className="inv-section-subtitle">
-                                            <FaOilCan /> XP Oils for Fragrance
-                                        </h4>
-                                        <div className="inv-section-actions">
-                                            <button
-                                                className="inv-add-close-btn inv-close-xp-btn"
-                                                onClick={() => {
-                                                    setXpOilItems([]);
-                                                    setXpOilSelect(null);
-                                                    setXpOilML("");
-                                                    setXpOilTotalML(0);
-                                                    setXpOilValidationError("");
-                                                    toast.info("XP Oils cleared");
-                                                }}
-                                                type="button"
-                                            >
-                                                <FaWindowClose /> Clear All
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* XP Oil Add Form */}
-                                    <div className="inv-form-row inv-form-row-xp">
-                                        <div className="inv-form-field">
-                                            <label>Select XP Oil</label>
-                                            <Select
-                                                options={xpOilOptions}
-                                                value={xpOilSelect}
-                                                onChange={setXpOilSelect}
-                                                placeholder="Select XP oil..."
-                                                isClearable
-                                                styles={customSelectStyles}
-                                                noOptionsMessage={() => "No XP oils available"}
-                                            />
-                                        </div>
-                                        <div className="inv-form-field inv-form-field-narrow">
-                                            <label>ML *</label>
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                min="0.1"
-                                                value={xpOilML}
-                                                onChange={(e) => setXpOilML(e.target.value)}
-                                                placeholder="Enter ml"
-                                                autoComplete="off"
-                                                disabled={!selectedPackage}
-                                            />
-                                        </div>
-                                        <div className="inv-add-btn-wrap">
-                                            <button
-                                                className="inv-add-xp-btn"
-                                                onClick={handleAddXPOil}
-                                                type="button"
-                                                disabled={!selectedPackage}
-                                            >
-                                                <FaPlus /> Add
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* ✅ XP Oil Total Display */}
-                                    {selectedPackage && (
-                                        <div className="inv-xp-validation">
-                                            <div className="inv-xp-total">
-                                                <span>Total Fragrance: </span>
-                                                <strong>{xpOilTotalML.toFixed(2)}ml</strong>
+                                            <div className="inv-package-block-header">
+                                                <h4 className="inv-section-subtitle">
+                                                    <FaBoxOpen /> Package {pkgIdx + 1}
+                                                    {block.lineId && <span className="inv-lineid-badge" title="Existing package (kept as-is)">Saved</span>}
+                                                </h4>
+                                                <button
+                                                    className="inv-remove-btn"
+                                                    onClick={() => handleRemovePackageBlock(block.tempId)}
+                                                    type="button"
+                                                    title="Remove package"
+                                                >
+                                                    <FaTrash /> Remove
+                                                </button>
                                             </div>
-                                            {xpOilItems.length === 0 ? (
-                                                <div className="inv-xp-info">
-                                                    <span>Add at least one XP Oil</span>
+
+                                            {/* Package select + qty */}
+                                            <div className="inv-form-row">
+                                                <div className="inv-form-field">
+                                                    <label>Select Package *</label>
+                                                    <Select
+                                                        options={packageOptions}
+                                                        value={block.packageSelect}
+                                                        onChange={(sel) => handleUpdatePackageSelect(block.tempId, sel)}
+                                                        placeholder="Select a package"
+                                                        isClearable
+                                                        styles={customSelectStyles}
+                                                        noOptionsMessage={() => "No active packages found"}
+                                                    />
+                                                    {block.packageSelect && (
+                                                        <small className="inv-hint">
+                                                            ML: {block.packageSelect.data?.bottleML}ml |
+                                                            Fragrance: {block.packageSelect.data?.fragranceQty}g |
+                                                            Fragrance Base: {block.packageSelect.data?.alcoholQty}ml
+                                                        </small>
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <div className="inv-xp-success">
-                                                    <FaCheck /> ✓ {xpOilItems.length} XP Oil(s) added
+                                                <div className="inv-form-field inv-form-field-narrow">
+                                                    <label>Quantity *</label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={block.quantity}
+                                                        onChange={(e) => handleUpdatePackageQuantity(block.tempId, e.target.value)}
+                                                        autoComplete="off"
+                                                    />
+                                                </div>
+                                                <div className="inv-form-field inv-form-field-narrow">
+                                                    <label><FaPercentage /> Discount (%)</label>
+                                                    <div className="inv-discount-input-group">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.01"
+                                                            value={block.discount}
+                                                            onChange={(e) => handleUpdatePackageDiscount(block.tempId, e.target.value)}
+                                                            className="inv-discount-input-full"
+                                                        />
+                                                        <span className="inv-discount-percent-label">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* XP oils sub-section for this block */}
+                                            {block.packageSelect && (
+                                                <div className="inv-section inv-xp-oil-section">
+                                                    <div className="inv-section-header-with-actions">
+                                                        <h4 className="inv-section-subtitle">
+                                                            <FaOilCan /> XP Oils for Fragrance
+                                                        </h4>
+                                                        <div className="inv-section-actions">
+                                                            <button
+                                                                className="inv-add-close-btn inv-close-xp-btn"
+                                                                onClick={() => {
+                                                                    setPackageItems(prev => prev.map(b => {
+                                                                        if (b.tempId !== block.tempId) return b;
+                                                                        return { ...b, xpOilItems: [], xpOilSelect: null, xpOilML: "" };
+                                                                    }));
+                                                                    toast.info("XP Oils cleared");
+                                                                }}
+                                                                type="button"
+                                                            >
+                                                                <FaWindowClose /> Clear All
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="inv-form-row inv-form-row-xp">
+                                                        <div className="inv-form-field">
+                                                            <label>Select XP Oil</label>
+                                                            <Select
+                                                                options={xpOilOptions}
+                                                                value={block.xpOilSelect}
+                                                                onChange={(sel) => handleUpdatePackageXPOilSelect(block.tempId, sel)}
+                                                                placeholder="Select XP oil..."
+                                                                isClearable
+                                                                styles={customSelectStyles}
+                                                                noOptionsMessage={() => "No XP oils available"}
+                                                            />
+                                                        </div>
+                                                        <div className="inv-form-field inv-form-field-narrow">
+                                                            <label>ML *</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                min="0.1"
+                                                                value={block.xpOilML}
+                                                                onChange={(e) => handleUpdatePackageXPOilML(block.tempId, e.target.value)}
+                                                                placeholder="Enter ml"
+                                                                autoComplete="off"
+                                                            />
+                                                        </div>
+                                                        <div className="inv-add-btn-wrap">
+                                                            <button
+                                                                className="inv-add-xp-btn"
+                                                                onClick={() => handleAddXPOilToPackage(block.tempId)}
+                                                                type="button"
+                                                            >
+                                                                <FaPlus /> Add
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {block.xpOilItems.length > 0 && (
+                                                        <div className="inv-xp-list">
+                                                            <h5>Added XP Oils</h5>
+                                                            <div className="inv-xp-table-wrap">
+                                                                <table className="inv-xp-table">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>XP Oil</th>
+                                                                            <th>ML</th>
+                                                                            <th>Density</th>
+                                                                            <th>Action</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {block.xpOilItems.map((item, xpIdx) => (
+                                                                            <tr key={xpIdx}>
+                                                                                <td>{item.productName}</td>
+                                                                                <td>
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        step="0.1"
+                                                                                        min="0.1"
+                                                                                        value={item.ml}
+                                                                                        onChange={(e) => handleUpdateXPOilMLInPackage(block.tempId, xpIdx, e.target.value)}
+                                                                                        className="inv-edit-input inv-edit-input-small"
+                                                                                    />
+                                                                                </td>
+                                                                                <td>{item.density || 1000}</td>
+                                                                                <td>
+                                                                                    <button
+                                                                                        className="inv-remove-btn"
+                                                                                        onClick={() => handleRemoveXPOilFromPackage(block.tempId, xpIdx)}
+                                                                                        type="button"
+                                                                                    >
+                                                                                        <FaTrash />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        <tr className="inv-xp-table-total">
+                                                                            <td><strong>Total</strong></td>
+                                                                            <td><strong>{block.xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0).toFixed(2)}ml</strong></td>
+                                                                            <td></td>
+                                                                            <td></td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="inv-form-row inv-fragrance-base-row">
+                                                        <div className="inv-form-field">
+                                                            <label><FaPercentage /> Fragrance Base (ml) *</label>
+                                                            <input
+                                                                type="number"
+                                                                min="0.1"
+                                                                step="0.1"
+                                                                value={block.fragranceBaseML}
+                                                                onChange={(e) => handleUpdatePackageFragranceBase(block.tempId, e.target.value)}
+                                                                placeholder="Enter Fragrance Base ML"
+                                                                autoComplete="off"
+                                                            />
+                                                            <small className="inv-hint">
+                                                                Default from package: {block.packageSelect.data?.alcoholQty || 0}ml. You can change it.
+                                                            </small>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
-                                        </div>
-                                    )}
 
-                                    {/* ✅ XP Oil List */}
-                                    {xpOilItems.length > 0 && (
-                                        <div className="inv-xp-list">
-                                            <h5>Added XP Oils</h5>
-                                            <div className="inv-xp-table-wrap">
-                                                <table className="inv-xp-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>XP Oil</th>
-                                                            <th>ML</th>
-                                                            <th>Density</th>
-                                                            <th>Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {xpOilItems.map((item, index) => (
-                                                            <tr key={index}>
-                                                                <td>{item.productName}</td>
-                                                                <td>
-                                                                    {isEditing ? (
-                                                                        <input
-                                                                            type="number"
-                                                                            step="0.1"
-                                                                            min="0.1"
-                                                                            value={item.ml}
-                                                                            onChange={(e) => handleUpdateXPOilML(index, e.target.value)}
-                                                                            className="inv-edit-input inv-edit-input-small"
-                                                                        />
-                                                                    ) : (
-                                                                        `${item.ml}ml`
-                                                                    )}
-                                                                </td>
-                                                                <td>{item.density || 1000}</td>
-                                                                <td>
-                                                                    <button
-                                                                        className="inv-remove-btn"
-                                                                        onClick={() => handleRemoveXPOil(index)}
-                                                                        type="button"
-                                                                    >
-                                                                        <FaTrash />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                        <tr className="inv-xp-table-total">
-                                                            <td><strong>Total</strong></td>
-                                                            <td><strong>{xpOilItems.reduce((sum, item) => sum + (item.ml || 0), 0).toFixed(2)}ml</strong></td>
-                                                            <td></td>
-                                                            <td></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
                                         </div>
-                                    )}
-
-                                    {/* ✅ NEW: Fragrance Base ML Input */}
-                                    {selectedPackage && (
-                                        <div className="inv-form-row inv-fragrance-base-row">
-                                            <div className="inv-form-field">
-                                                <label><FaPercentage /> Fragrance Base (ml) *</label>
-                                                <input
-                                                    type="number"
-                                                    min="0.1"
-                                                    step="0.1"
-                                                    value={fragranceBaseML}
-                                                    onChange={(e) => setFragranceBaseML(e.target.value)}
-                                                    placeholder="Enter Fragrance Base ML"
-                                                    autoComplete="off"
-                                                />
-                                                <small className="inv-hint">
-                                                    Default from package: {selectedPackage.data?.alcoholQty || 0}ml. You can change it.
-                                                </small>
-                                            </div>
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             )}
+
+                            {/* Add Package Button */}
+                            <div className="inv-form-row">
+                                <button
+                                    className="inv-add-package-btn"
+                                    onClick={handleAddPackageBlock}
+                                    type="button"
+                                >
+                                    <FaPlus /> Add {packageItems.length === 0 ? 'Package' : 'Another Package'}
+                                </button>
+                            </div>
+
                         </div>
 
-                        {/* SECTION 3: DISPENSER ITEMS - UPDATED TO USE XP ID */}
+                        {/* SECTION 3: DISPENSER ITEMS */}
                         <div className="inv-section inv-dispenser-section">
                             <div className="inv-section-header-with-actions">
                                 <h3 className="inv-section-title">
@@ -2645,17 +2698,13 @@ const Invoice = () => {
                                                             <td>{item.productName}</td>
                                                             <td>{item.ml}ml</td>
                                                             <td>
-                                                                {isEditing ? (
-                                                                    <input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => handleUpdateDispenserQuantity(index, e.target.value)}
-                                                                        className="inv-edit-input"
-                                                                    />
-                                                                ) : (
-                                                                    item.quantity
-                                                                )}
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={item.quantity}
+                                                                    onChange={(e) => handleUpdateDispenserQuantity(index, e.target.value)}
+                                                                    className="inv-edit-input"
+                                                                />
                                                             </td>
                                                             <td>
                                                                 <input
@@ -2665,7 +2714,6 @@ const Invoice = () => {
                                                                     value={unitPrice}
                                                                     onChange={(e) => handleUpdateDispenserUnitPrice(index, e.target.value)}
                                                                     className="inv-edit-input inv-unit-price-input"
-                                                                    disabled={isEditing}
                                                                 />
                                                             </td>
                                                             <td>
@@ -2677,7 +2725,6 @@ const Invoice = () => {
                                                                     value={item.discount || 0}
                                                                     onChange={(e) => handleUpdateDispenserDiscount(index, e.target.value)}
                                                                     className="inv-discount-input"
-                                                                    disabled={isEditing}
                                                                 />
                                                                 <span className="inv-discount-percent">%</span>
                                                             </td>
@@ -2892,23 +2939,21 @@ const Invoice = () => {
 
                             <div className="inv-summary-grid">
                                 <div className="inv-summary-item">
-                                    <span>Package Price</span>
-                                    <span className="inv-summary-value">
-                                        {selectedPackage ? `₹${packageOriginalPrice.toFixed(2)}` : '₹0'}
-                                    </span>
+                                    <span>Packages Original Total</span>
+                                    <span className="inv-summary-value">₹{packageOriginalTotal.toFixed(2)}</span>
                                 </div>
-                                {packageDiscountAmount > 0 && (
+                                {packageDiscountTotal > 0 && (
                                     <div className="inv-summary-item inv-summary-detail inv-summary-discount">
-                                        <span>Package Discount ({packageDiscountPercent}%)</span>
+                                        <span>Packages Discount</span>
                                         <span className="inv-summary-value inv-discount-amount">
-                                            -₹{packageDiscountAmount.toFixed(2)}
+                                            -₹{packageDiscountTotal.toFixed(2)}
                                         </span>
                                     </div>
                                 )}
                                 <div className="inv-summary-item">
-                                    <span>Package Final</span>
+                                    <span>Packages Final Total</span>
                                     <span className="inv-summary-value inv-final-price">
-                                        ₹{packageFinalPrice.toFixed(2)}
+                                        ₹{packageFinalTotal.toFixed(2)}
                                     </span>
                                 </div>
 
@@ -3007,9 +3052,7 @@ const Invoice = () => {
                                     isSubmitting ||
                                     isUpdating ||
                                     (!selectedCustomer && !newCustomerName.trim()) ||
-                                    (!selectedCustomer && !newCustomerContact.trim()) ||
-                                    (selectedPackage && xpOilItems.length === 0) ||
-                                    (selectedPackage && (!fragranceBaseML || parseFloat(fragranceBaseML) <= 0))
+                                    (!selectedCustomer && !newCustomerContact.trim())
                                 }
                                 type="button"
                             >

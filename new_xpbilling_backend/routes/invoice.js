@@ -603,11 +603,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             customerId,
             newCustomer,
             workshopId,
-            packageId,
-            xpOilItems,
-            fragranceBaseML,
+            packageItems,
             dispenserItems,
-            packageDiscount,
             promoCode,
             paymentStatus,
             invoiceDate,
@@ -619,9 +616,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         console.log("  👤 Customer ID:", customerId);
         console.log("  👤 New Customer:", newCustomer);
         console.log("  🏭 Workshop ID:", workshopId);
-        console.log("  📦 Package ID:", packageId);
-        console.log("  🧪 XP Oil Items:", xpOilItems?.length || 0);
-        console.log("  🍷 Fragrance Base ML:", fragranceBaseML);
+        console.log("  📦 Package Items:", packageItems?.length || 0);
         console.log("  💧 Dispenser Items:", dispenserItems?.length || 0);
         console.log("  🏷️ Promo Code:", promoCode);
         console.log("  💳 Payment:", paymentStatus);
@@ -662,7 +657,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
             const { customerName, email, contactNumber } = newCustomer;
 
-            // Validate required fields
             if (!customerName || !customerName.trim()) {
                 console.log("❌ New customer: name missing");
                 await logFailed({
@@ -695,7 +689,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 });
             }
 
-            // Validate phone format (10 digits)
             if (!/^[0-9]{10}$/.test(contactNumber.trim())) {
                 console.log("❌ New customer: invalid phone format:", contactNumber);
                 await logFailed({
@@ -712,7 +705,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 });
             }
 
-            // Validate email format (if provided)
             if (email && email.trim() && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email.trim())) {
                 console.log("❌ New customer: invalid email format:", email);
                 await logFailed({
@@ -729,7 +721,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 });
             }
 
-            // Check duplicate phone
             const existingByPhone = await Customer.findOne({ contactNumber: contactNumber.trim() });
             if (existingByPhone) {
                 console.log("❌ New customer: phone already exists:", contactNumber);
@@ -747,7 +738,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 });
             }
 
-            // Check duplicate email (if provided)
             if (email && email.trim()) {
                 const existingByEmail = await Customer.findOne({ email: email.trim() });
                 if (existingByEmail) {
@@ -767,7 +757,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 }
             }
 
-            // Create the new customer
             const newCustDoc = new Customer({
                 customerName: customerName.trim(),
                 email: email && email.trim() ? email.trim() : undefined,
@@ -886,80 +875,60 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         }
 
         // ============================================
-        // 3. GET PACKAGE & VALIDATE MULTIPLE XP OILS
+        // 3. VALIDATE MULTIPLE PACKAGES & XP OILS
         // ============================================
-        console.log("\n🔍 Step 3: Checking Package & XP Oils...");
-        let packageData = null;
+        console.log("\n🔍 Step 3: Checking Packages & XP Oils...");
+        let packageItemsData = [];
         let hasPackage = false;
-        let selectedPackage = null;
-        let packageFinalPrice = 0;
-        let packageDiscountAmount = 0;
-        let validatedXPOils = [];
-        let validatedFragranceBaseML = 0;
+        let packageFinalPriceTotal = 0;
+        let packageDiscountTotal = 0;
 
-        if (packageId) {
-            console.log("  📦 Package ID provided:", packageId);
-            selectedPackage = await Package.findOne({ packageId, isActive: true });
-            if (!selectedPackage) {
-                console.log("❌ Package not found or inactive:", packageId);
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Create',
-                    heading: 'Invoice Creation Failed',
-                    description: 'Package not found or inactive'
-                });
-                return res.status(404).json({
-                    message: "Package not found or inactive"
-                });
+        if (packageItems && packageItems.length > 0) {
+            console.log("  📦 Total Packages:", packageItems.length);
+
+            // ============================================
+            // ✅ AGGREGATE STOCK DEMAND FIRST (across all packages)
+            // ============================================
+            const aggregatedXP = {};          // { xpId: totalML }
+            let aggregatedFragranceBaseML = 0;
+            const aggregatedBottles = {};     // { mlSize: totalQty }
+
+            // First pass — build aggregated demand
+            for (const pkg of packageItems) {
+                const qty = parseInt(pkg.quantity) || 1;
+                const xpOils = pkg.xpOilItems || [];
+                for (const xp of xpOils) {
+                    if (xp.xpId) {
+                        const ml = parseFloat(xp.ml) || 0;
+                        aggregatedXP[xp.xpId] = (aggregatedXP[xp.xpId] || 0) + (ml * qty);
+                    }
+                }
+                if (pkg.fragranceBaseML) {
+                    aggregatedFragranceBaseML += (parseFloat(pkg.fragranceBaseML) || 0) * qty;
+                }
             }
 
-            const xpOilItemsFromRequest = xpOilItems || [];
+            // We'll aggregate bottle demand once we know the bottleML of each package.
+            // That happens inside the loop below — we'll check bottles per-package then.
 
-            if (!xpOilItemsFromRequest || xpOilItemsFromRequest.length === 0) {
-                console.log("❌ No XP Oil items provided");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Create',
-                    heading: 'Invoice Creation Failed',
-                    description: 'At least one XP Oil is required when package is selected'
-                });
-                return res.status(400).json({
-                    message: "At least one XP Oil is required when package is selected"
-                });
-            }
+            // ============================================
+            // ✅ SECOND PASS — Validate each package individually
+            // ============================================
+            for (let i = 0; i < packageItems.length; i++) {
+                const pkgInput = packageItems[i];
+                const { packageId, xpOilItems, fragranceBaseML, discount } = pkgInput;
+                const qty = parseInt(pkgInput.quantity) || 1;
 
-            // ✅ Validate fragranceBaseML (must be > 0)
-            if (fragranceBaseML === undefined || fragranceBaseML === null || parseFloat(fragranceBaseML) <= 0) {
-                console.log("❌ Invalid Fragrance Base ML:", fragranceBaseML);
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Create',
-                    heading: 'Invoice Creation Failed',
-                    description: 'Fragrance Base ML must be greater than 0'
-                });
-                return res.status(400).json({
-                    message: "Fragrance Base ML must be greater than 0"
-                });
-            }
+                console.log(`\n  📦 Package ${i + 1}/${packageItems.length}:`);
+                console.log(`    Package ID: ${packageId}`);
+                console.log(`    Quantity: ${qty}`);
+                console.log(`    XP Oils: ${xpOilItems?.length || 0}`);
+                console.log(`    Fragrance Base ML: ${fragranceBaseML}`);
+                console.log(`    Discount: ${discount}%`);
 
-            validatedFragranceBaseML = parseFloat(fragranceBaseML);
-
-            let totalXPMl = 0;
-
-            for (const xpItem of xpOilItemsFromRequest) {
-                const { xpId, ml } = xpItem;
-
-                if (!xpId) {
-                    console.log("❌ XP Oil ID missing for an item");
+                // ✅ Validate package exists
+                if (!packageId) {
+                    console.log("❌ Package ID missing");
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -967,15 +936,16 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: 'XP Oil ID is required for each oil'
+                        description: 'Package ID is required for each package'
                     });
                     return res.status(400).json({
-                        message: "XP Oil ID is required for each oil"
+                        message: "Package ID is required for each package"
                     });
                 }
 
-                if (!ml || parseFloat(ml) <= 0) {
-                    console.log("❌ Invalid ML for XP Oil:", ml);
+                const selectedPackage = await Package.findOne({ packageId, isActive: true });
+                if (!selectedPackage) {
+                    console.log("❌ Package not found or inactive:", packageId);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -983,13 +953,234 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: 'ML must be greater than 0 for each XP Oil'
+                        description: `Package not found or inactive: ${packageId}`
+                    });
+                    return res.status(404).json({
+                        message: `Package not found or inactive: ${packageId}`
+                    });
+                }
+                console.log(`    ✅ Package found: ${selectedPackage.packageName}`);
+
+                // ✅ Validate qty
+                if (qty < 1) {
+                    console.log("❌ Invalid quantity:", qty);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: 'Package quantity must be at least 1'
                     });
                     return res.status(400).json({
-                        message: "ML must be greater than 0 for each XP Oil"
+                        message: "Package quantity must be at least 1"
                     });
                 }
 
+                // ✅ Validate XP oils
+                const xpOilItemsFromRequest = xpOilItems || [];
+                if (!xpOilItemsFromRequest || xpOilItemsFromRequest.length === 0) {
+                    console.log("❌ No XP Oil items provided for this package");
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: 'At least one XP Oil is required for each package'
+                    });
+                    return res.status(400).json({
+                        message: "At least one XP Oil is required for each package"
+                    });
+                }
+
+                // ✅ Validate fragranceBaseML
+                if (fragranceBaseML === undefined || fragranceBaseML === null || parseFloat(fragranceBaseML) <= 0) {
+                    console.log("❌ Invalid Fragrance Base ML:", fragranceBaseML);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: 'Fragrance Base ML must be greater than 0'
+                    });
+                    return res.status(400).json({
+                        message: "Fragrance Base ML must be greater than 0"
+                    });
+                }
+
+                const validatedFragranceBaseML = parseFloat(fragranceBaseML);
+
+                // ✅ Validate each XP oil + build validatedXPOils array
+                let totalXPMl = 0;
+                let validatedXPOils = [];
+
+                for (const xpItem of xpOilItemsFromRequest) {
+                    const { xpId, ml } = xpItem;
+
+                    if (!xpId) {
+                        console.log("❌ XP Oil ID missing");
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Create',
+                            heading: 'Invoice Creation Failed',
+                            description: 'XP Oil ID is required for each oil'
+                        });
+                        return res.status(400).json({
+                            message: "XP Oil ID is required for each oil"
+                        });
+                    }
+
+                    if (!ml || parseFloat(ml) <= 0) {
+                        console.log("❌ Invalid ML for XP Oil:", ml);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Create',
+                            heading: 'Invoice Creation Failed',
+                            description: 'ML must be greater than 0 for each XP Oil'
+                        });
+                        return res.status(400).json({
+                            message: "ML must be greater than 0 for each XP Oil"
+                        });
+                    }
+
+                    const xpOil = await XPInventory.findOne({ xpId });
+                    if (!xpOil) {
+                        console.log("❌ XP Oil not found:", xpId);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Create',
+                            heading: 'Invoice Creation Failed',
+                            description: `XP Oil not found: ${xpId}`
+                        });
+                        return res.status(404).json({
+                            message: `XP Oil not found: ${xpId}`
+                        });
+                    }
+
+                    const mlValue = parseFloat(ml);
+                    totalXPMl += mlValue;
+
+                    validatedXPOils.push({
+                        xpId: xpOil.xpId,
+                        productName: xpOil.productName,
+                        ml: mlValue,
+                        quantityInKG: mlValue / (xpOil.density || 1000),
+                        density: xpOil.density || 1000,
+                        pricePerKG: xpOil.avgPurchasePrice || 0
+                    });
+
+                    console.log(`    ✅ XP Oil: ${xpOil.productName}, ML: ${mlValue}ml`);
+                }
+
+                console.log(`    📊 Total XP ML (per unit): ${totalXPMl}ml`);
+                console.log(`    🍷 Fragrance Base (per unit): ${validatedFragranceBaseML}ml`);
+
+                // ✅ Compute per-package pricing
+                const pkgDiscountPercent = discount !== undefined ? discount : selectedPackage.discount || 0;
+                const pkgDiscountAmount = (selectedPackage.pricing * pkgDiscountPercent) / 100;
+                const pkgFinalPrice = selectedPackage.pricing - pkgDiscountAmount;
+
+                // Accumulate totals
+                packageDiscountTotal += pkgDiscountAmount * qty;
+                packageFinalPriceTotal += pkgFinalPrice * qty;
+
+                console.log(`    💰 Package Unit Price: ₹${selectedPackage.pricing}`);
+                console.log(`    💰 Discount: ${pkgDiscountPercent}% (₹${pkgDiscountAmount})`);
+                console.log(`    💰 Final Unit Price: ₹${pkgFinalPrice}`);
+                console.log(`    💰 Line Total (× ${qty}): ₹${pkgFinalPrice * qty}`);
+
+                // ✅ Bottles per-package (must check per ml size because bottles differ)
+                const mlSize = selectedPackage.bottleML.toString();
+                aggregatedBottles[mlSize] = (aggregatedBottles[mlSize] || 0) + qty;
+
+                // Build package data object
+                packageItemsData.push({
+                    packageId: selectedPackage.packageId,
+                    packageName: selectedPackage.packageName,
+                    pricing: selectedPackage.pricing,
+                    oilCount: selectedPackage.oilCount,
+                    quantity: qty,
+                    discount: pkgDiscountPercent,
+                    discountAmount: pkgDiscountAmount,
+                    finalPrice: pkgFinalPrice,
+                    bottleML: selectedPackage.bottleML,
+                    fillingLevel: selectedPackage.fillingLevel,
+                    fragranceQty: totalXPMl,
+                    alcoholQty: validatedFragranceBaseML,
+                    xpOilItems: validatedXPOils,
+                    xpOil: validatedXPOils.length > 0 ? {
+                        xpId: validatedXPOils[0].xpId,
+                        productName: validatedXPOils[0].productName,
+                        quantity: validatedXPOils[0].quantityInKG,
+                        density: validatedXPOils[0].density
+                    } : null
+                });
+            }
+
+            hasPackage = true;
+
+            // ============================================
+            // ✅ AGGREGATED STOCK VALIDATION
+            // ============================================
+            console.log("\n🔍 Aggregated Stock Validation Across All Packages...");
+
+            // ✅ 1. Fragrance Base — check total demand
+            if (aggregatedFragranceBaseML > 0) {
+                const totalAlcoholKG = aggregatedFragranceBaseML / 820;
+                console.log("  🍷 Total Fragrance Base Required:", aggregatedFragranceBaseML, "ml (", totalAlcoholKG, "KG)");
+
+                const alcoholProduct = await XPInventory.findOne({ productName: "FRAGRANCE BASE" });
+                if (!alcoholProduct) {
+                    console.log("❌ FRAGRANCE BASE not found");
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: 'FRAGRANCE BASE not found in inventory'
+                    });
+                    return res.status(404).json({
+                        message: "FRAGRANCE BASE not found in inventory"
+                    });
+                }
+
+                if (alcoholProduct.quantity < totalAlcoholKG) {
+                    console.log("❌ Insufficient Fragrance Base stock. Available:", alcoholProduct.quantity, "KG, Required:", totalAlcoholKG, "KG");
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Create',
+                        heading: 'Invoice Creation Failed',
+                        description: `Insufficient Fragrance Base stock. Available: ${alcoholProduct.quantity} KG, Required: ${totalAlcoholKG} KG (${aggregatedFragranceBaseML} ML)`
+                    });
+                    return res.status(400).json({
+                        message: `Insufficient Fragrance Base stock. Available: ${alcoholProduct.quantity} KG, Required: ${totalAlcoholKG} KG (${aggregatedFragranceBaseML} ML)`
+                    });
+                }
+                console.log("  ✅ Fragrance Base stock sufficient");
+            }
+
+            // ✅ 2. XP Oils — check each aggregated oil
+            for (const [xpId, totalML] of Object.entries(aggregatedXP)) {
+                if (totalML <= 0) continue;
                 const xpOil = await XPInventory.findOne({ xpId });
                 if (!xpOil) {
                     console.log("❌ XP Oil not found:", xpId);
@@ -1006,74 +1197,11 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         message: `XP Oil not found: ${xpId}`
                     });
                 }
+                const requiredKG = totalML / (xpOil.density || 1000);
+                console.log(`  🧪 ${xpOil.productName}: required ${totalML}ml (${requiredKG}KG), available ${xpOil.quantity}KG`);
 
-                const mlValue = parseFloat(ml);
-                totalXPMl += mlValue;
-
-                validatedXPOils.push({
-                    xpId: xpOil.xpId,
-                    productName: xpOil.productName,
-                    ml: mlValue,
-                    quantityInKG: mlValue / (xpOil.density || 1000),
-                    density: xpOil.density || 1000,
-                    pricePerKG: xpOil.avgPurchasePrice || 0
-                });
-
-                console.log(`  ✅ XP Oil: ${xpOil.productName}, ML: ${mlValue}ml`);
-            }
-
-            console.log(`  📊 Total XP ML: ${totalXPMl}ml`);
-            console.log(`  🍷 Fragrance Base ML: ${validatedFragranceBaseML}ml`);
-
-            // ✅ Stock check for Fragrance Base using user-entered ML
-            const alcoholKG = validatedFragranceBaseML / 820;
-            console.log("  🍷 Fragrance Base Required:", validatedFragranceBaseML, "ml (", alcoholKG, "KG)");
-            const alcoholProduct = await XPInventory.findOne({
-                productName: "FRAGRANCE BASE"
-            });
-
-            if (!alcoholProduct) {
-                console.log("❌ FRAGRANCE BASE not found");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Create',
-                    heading: 'Invoice Creation Failed',
-                    description: 'FRAGRANCE BASE not found in inventory'
-                });
-                return res.status(404).json({
-                    message: "FRAGRANCE BASE not found in inventory"
-                });
-            }
-
-            if (alcoholProduct.quantity < alcoholKG) {
-                console.log("❌ Insufficient Fragrance Base stock. Available:", alcoholProduct.quantity, "KG, Required:", alcoholKG, "KG");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Create',
-                    heading: 'Invoice Creation Failed',
-                    description: `Insufficient Alcohol stock. Available: ${alcoholProduct.quantity} KG, Required: ${alcoholKG} KG (${validatedFragranceBaseML} ML)`
-                });
-                return res.status(400).json({
-                    message: `Insufficient Alcohol stock. Available: ${alcoholProduct.quantity} KG, Required: ${alcoholKG} KG (${validatedFragranceBaseML} ML)`
-                });
-            }
-            console.log("  ✅ Alcohol stock sufficient");
-
-            const mlSize = selectedPackage.bottleML.toString();
-            console.log("  🧴 Bottle ML:", mlSize, "ml");
-            const bottleItems = (mlSize === '3' || mlSize === '6')
-                ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                : ['Bottle', 'Cap', 'Pump', 'Box'];
-            for (const itemType of bottleItems) {
-                const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
-                if (!bottleStock || bottleStock.quantity < 1) {
-                    console.log(`❌ Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`);
+                if (xpOil.quantity < requiredKG) {
+                    console.log(`❌ Insufficient stock for ${xpOil.productName}`);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1081,50 +1209,45 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`
+                        description: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                     return res.status(400).json({
-                        message: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`
+                        message: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                 }
-                console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
+            }
+            console.log("  ✅ All XP Oils stock sufficient");
+
+            // ✅ 3. Bottles — check each ml size
+            for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
+                const bottleItems = (mlSize === '3' || mlSize === '6')
+                    ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+
+                for (const itemType of bottleItems) {
+                    const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
+                    if (!bottleStock || bottleStock.quantity < totalQty) {
+                        console.log(`❌ Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Create',
+                            heading: 'Invoice Creation Failed',
+                            description: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`
+                        });
+                        return res.status(400).json({
+                            message: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`
+                        });
+                    }
+                }
+                console.log(`  ✅ ${mlSize}ml bottles: ${totalQty} sets sufficient`);
             }
 
-            const packageDiscountPercent = packageDiscount !== undefined ? packageDiscount : selectedPackage.discount || 0;
-            packageDiscountAmount = (selectedPackage.pricing * packageDiscountPercent) / 100;
-            packageFinalPrice = selectedPackage.pricing - packageDiscountAmount;
-            console.log("  💰 Package Original Price:", selectedPackage.pricing);
-            console.log("  💰 Package Discount:", packageDiscountPercent, "% (₹", packageDiscountAmount, ")");
-            console.log("  💰 Package Final Price:", packageFinalPrice);
-
-            packageData = {
-                packageId: selectedPackage.packageId,
-                packageName: selectedPackage.packageName,
-                pricing: selectedPackage.pricing,
-                oilCount: selectedPackage.oilCount,
-                discount: packageDiscountPercent,
-                discountAmount: packageDiscountAmount,
-                finalPrice: packageFinalPrice,
-                bottleML: selectedPackage.bottleML,
-                fillingLevel: selectedPackage.fillingLevel,
-                // ✅ CHANGED: Use actual total XP ML (not package default)
-                fragranceQty: totalXPMl,
-                // ✅ CHANGED: Use user-entered Fragrance Base ML (not package default)
-                alcoholQty: validatedFragranceBaseML,
-                xpOilItems: validatedXPOils,
-                xpOil: validatedXPOils.length > 0 ? {
-                    xpId: validatedXPOils[0].xpId,
-                    productName: validatedXPOils[0].productName,
-                    quantity: validatedXPOils[0].quantityInKG,
-                    density: validatedXPOils[0].density
-                } : null
-            };
-            hasPackage = true;
-            console.log("  ✅ Package data prepared with", validatedXPOils.length, "XP Oils");
-            console.log("  📊 Fragrance Qty (actual):", totalXPMl, "ml");
-            console.log("  🍷 Fragrance Base (user):", validatedFragranceBaseML, "ml");
+            console.log("  ✅ All aggregated stock checks passed");
         } else {
-            console.log("  ℹ️ No package provided");
+            console.log("  ℹ️ No packages provided");
         }
 
         // ============================================
@@ -1190,7 +1313,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     });
                 }
 
-                // ✅ Find XPInventory using xpId
                 const xpOil = await XPInventory.findOne({ xpId });
                 if (!xpOil) {
                     console.log("❌ XP Oil not found:", xpId);
@@ -1231,7 +1353,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 }
                 console.log(`  ✅ Stock sufficient`);
 
-                // Check Bottles Inventory for dispenser
                 const mlSize = ml.toString();
                 const bottleItems = (mlSize === '3' || mlSize === '6')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
@@ -1256,11 +1377,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
-                // ✅ Get selling prices from XPInventory
                 const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
 
-                // ✅ Calculate using existing schema fields
                 const itemDiscountPercent = discount !== undefined ? discount : 0;
                 const originalTotal = baseUnitPrice * quantity;
                 const discountAmount = (originalTotal * itemDiscountPercent) / 100;
@@ -1300,7 +1419,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     `Reduced for invoice ${invoiceNumber} (${xpOil.productName}: ${ml}ml × ${quantity})`
                 );
 
-                // ✅ ADDED: REDUCE BOTTLE INVENTORY FOR DISPENSERS
+                // ✅ REDUCE BOTTLE INVENTORY FOR DISPENSERS
                 await reduceBottlesInventory(
                     ml.toString(),
                     quantity,
@@ -1317,9 +1436,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         // ============================================
         // 5. CALCULATE SUBTOTAL
         // ============================================
-        const subtotal = packageFinalPrice + dispenserSubtotal;
+        const subtotal = packageFinalPriceTotal + dispenserSubtotal;
         console.log("\n💰 SUBTOTAL CALCULATION:");
-        console.log("  📦 Package Final: ₹", packageFinalPrice);
+        console.log("  📦 Package Final Total: ₹", packageFinalPriceTotal);
         console.log("  💧 Dispenser Final: ₹", dispenserSubtotal);
         console.log("  💰 Subtotal (incl. GST): ₹", subtotal);
 
@@ -1355,8 +1474,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 });
             }
 
-            const now = new Date();
-            if (promo.startDate > now || promo.endDate < now) {
+            const nowPromo = new Date();
+            if (promo.startDate > nowPromo || promo.endDate < nowPromo) {
                 console.log("❌ Promo code not active for current date");
                 await logFailed({
                     module: 'Invoice',
@@ -1422,7 +1541,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         const loyaltyCoinsEarned = Math.floor(afterPromo / 100);
         console.log("  🪙 Loyalty Coins EARNED:", loyaltyCoinsEarned);
 
-        const totalDiscountAmount = packageDiscountAmount + totalDispenserDiscount + promoDiscountAmount + loyaltyDiscountAmount;
+        const totalDiscountAmount = packageDiscountTotal + totalDispenserDiscount + promoDiscountAmount + loyaltyDiscountAmount;
         console.log("  💰 Total Discount: ₹", totalDiscountAmount);
 
         // ============================================
@@ -1462,7 +1581,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             },
             workshop: workshopData,
             hasWorkshop: hasWorkshop,
-            packageItem: packageData,
+            packageItems: packageItemsData,
             hasPackage: hasPackage,
             dispenserItems: dispenserItemsData,
             hasDispenser: hasDispenser,
@@ -1475,7 +1594,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             subtotalWithoutGST: subtotalWithoutGST,
             gstRate: GST_RATE,
             gstAmount: gstAmount,
-            packageDiscountAmount: packageDiscountAmount,
+            packageDiscountAmount: packageDiscountTotal,
             dispenserDiscountAmount: totalDispenserDiscount,
             promoDiscount: promoDiscountAmount,
             totalDiscountAmount: totalDiscountAmount,
@@ -1532,42 +1651,55 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
         }
 
         // ============================================
-        // 11. REDUCE PACKAGE INVENTORIES (XP Oils, Fragrance Base, Bottles)
+        // 11. REDUCE PACKAGE INVENTORIES (per package, using qty)
         // ============================================
         console.log("\n🔍 Step 11: Reducing Package Inventories...");
         const inventoryUpdates = [];
 
-        if (hasPackage) {
-            console.log("  📦 Reducing Package Inventories...");
+        if (hasPackage && packageItemsData.length > 0) {
+            for (let i = 0; i < packageItemsData.length; i++) {
+                const pkg = packageItemsData[i];
+                const qty = pkg.quantity || 1;
 
-            const xpResult = await reduceMultipleXPOils(
-                validatedXPOils,
-                req.user,
-                invoice.invoiceNumber
-            );
-            inventoryUpdates.push({ type: 'XP Oils - Multiple', details: xpResult.results });
-            console.log(`  ✅ ${xpResult.results.length} XP Oils reduced: ${xpResult.totalML}ml total`);
+                console.log(`\n  📦 Package ${i + 1}/${packageItemsData.length}: ${pkg.packageName} (qty ${qty})`);
 
-            // ✅ CHANGED: Use user-entered fragranceBaseML
-            const alcoholResult = await reduceAlcohol(
-                validatedFragranceBaseML,
-                req.user,
-                'Invoice - Fragrance Base',
-                `Reduced for invoice ${invoice.invoiceNumber} (Fragrance Base: ${validatedFragranceBaseML}ml)`
-            );
-            inventoryUpdates.push({ type: 'FRAGRANCE BASE', details: alcoholResult });
-            console.log(`  ✅ Fragrance Base reduced: ${validatedFragranceBaseML}ml`);
+                // ✅ Reduce XP Oils × qty
+                const xpItemsForReduction = pkg.xpOilItems.map(item => ({
+                    xpId: item.xpId,
+                    ml: item.ml * qty
+                }));
 
-            const mlSize = selectedPackage.bottleML.toString();
-            const bottleResult = await reduceBottlesInventory(
-                mlSize,
-                1,
-                req.user,
-                'Invoice - Package',
-                `Reduced for invoice ${invoice.invoiceNumber} (Package: ${selectedPackage.packageName})`
-            );
-            inventoryUpdates.push({ type: 'Bottles - Package', details: bottleResult });
-            console.log(`  ✅ Bottles reduced: ${mlSize}ml`);
+                const xpResult = await reduceMultipleXPOils(
+                    xpItemsForReduction,
+                    req.user,
+                    invoice.invoiceNumber
+                );
+                inventoryUpdates.push({ type: `XP Oils (Package ${i + 1})`, details: xpResult.results });
+                console.log(`  ✅ ${xpResult.results.length} XP Oils reduced: ${xpResult.totalML}ml total (incl. qty ×${qty})`);
+
+                // ✅ Reduce Fragrance Base × qty
+                const totalFragranceForThisPkg = pkg.alcoholQty * qty;
+                const alcoholResult = await reduceAlcohol(
+                    totalFragranceForThisPkg,
+                    req.user,
+                    'Invoice - Fragrance Base',
+                    `Reduced for invoice ${invoice.invoiceNumber} (Package ${i + 1}: ${pkg.packageName}, Fragrance Base: ${totalFragranceForThisPkg}ml)`
+                );
+                inventoryUpdates.push({ type: `Fragrance Base (Package ${i + 1})`, details: alcoholResult });
+                console.log(`  ✅ Fragrance Base reduced: ${totalFragranceForThisPkg}ml (incl. qty ×${qty})`);
+
+                // ✅ Reduce Bottles × qty
+                const mlSize = pkg.bottleML.toString();
+                const bottleResult = await reduceBottlesInventory(
+                    mlSize,
+                    qty,
+                    req.user,
+                    'Invoice - Package',
+                    `Reduced for invoice ${invoice.invoiceNumber} (Package ${i + 1}: ${pkg.packageName}, ${mlSize}ml × ${qty})`
+                );
+                inventoryUpdates.push({ type: `Bottles (Package ${i + 1})`, details: bottleResult });
+                console.log(`  ✅ Bottles reduced: ${mlSize}ml × ${qty}`);
+            }
         }
 
         // ============================================
@@ -1599,10 +1731,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 previousBalance: previousBalance
             },
             calculations: {
-                packageOriginal: hasPackage ? selectedPackage.pricing : 0,
-                packageDiscountPercent: hasPackage ? selectedPackage.discount : 0,
-                packageDiscountAmount: packageDiscountAmount,
-                packageFinal: packageFinalPrice,
+                packageFinalTotal: packageFinalPriceTotal,
+                packageDiscountTotal: packageDiscountTotal,
                 dispenserSubtotal: dispenserSubtotal,
                 dispenserDiscountTotal: totalDispenserDiscount,
                 subtotal: subtotal,
@@ -1650,10 +1780,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
     try {
         const { invoiceId } = req.params;
         const {
-            packageId,
-            xpOilItems,
-            fragranceBaseML,
-            packageDiscount,
+            packageItems,
             dispenserItems,
             promoCode,
             paymentStatus,
@@ -1662,10 +1789,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         } = req.body;
 
         console.log("\n📋 Update Data:");
-        console.log("  📦 Package ID:", packageId);
-        console.log("  🧪 XP Oil Items:", xpOilItems?.length || 0);
-        console.log("  🍷 Fragrance Base ML:", fragranceBaseML);
-        console.log("  💰 Package Discount:", packageDiscount);
+        console.log("  📦 Package Items:", packageItems?.length || 0);
         console.log("  💧 Dispenser Items:", dispenserItems?.length || 0);
         console.log("  🏷️ Promo Code:", promoCode);
         console.log("  💳 Payment:", paymentStatus);
@@ -1708,95 +1832,192 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         const originalLoyaltyUsed = originalInvoice.loyaltyCoinsUsed || 0;
 
         // ============================================
+        // ✅ Normalize OLD invoice packages to array (A1 backward compat)
+        // ============================================
+        let originalPackageItems = [];
+        if (originalInvoice.packageItems && originalInvoice.packageItems.length > 0) {
+            originalPackageItems = originalInvoice.packageItems.map(p => p.toObject ? p.toObject() : p);
+        } else if (originalInvoice.packageItem && originalInvoice.packageItem.packageId) {
+            originalPackageItems = [
+                originalInvoice.packageItem.toObject ? originalInvoice.packageItem.toObject() : originalInvoice.packageItem
+            ];
+            // Ensure qty exists
+            if (!originalPackageItems[0].quantity) originalPackageItems[0].quantity = 1;
+        }
+        console.log("  📦 Original Packages (normalized):", originalPackageItems.length);
+
+        // ✅ Build oldByLineId map at higher scope (used in Step 3 AND Step 5)
+        const oldByLineId = {};
+        for (const op of originalPackageItems) {
+            if (op.lineId) {
+                oldByLineId[op.lineId] = op;
+            }
+        }
+        console.log("  📊 Old packages with lineId:", Object.keys(oldByLineId).length);
+
+        // ============================================
         // 2. TRACK CHANGES
         // ============================================
         console.log("\n🔍 Step 2: Tracking Changes...");
-        const changes = {
-            package: { old: originalInvoice.packageItem, new: null },
-            xpOilItems: { old: originalInvoice.packageItem?.xpOilItems || [], new: [] },
-            dispenser: { old: originalInvoice.dispenserItems, new: [] }
-        };
-
-        console.log("  📦 Original Package:", originalInvoice.hasPackage ? originalInvoice.packageItem?.packageName : "None");
-        console.log("  🧪 Original XP Oils:", originalInvoice.packageItem?.xpOilItems?.length || 0);
         console.log("  💧 Original Dispensers:", originalInvoice.dispenserItems?.length || 0);
 
         // ============================================
-        // 3. HANDLE PACKAGE CHANGES
+        // 3. VALIDATE NEW PACKAGES & XP OILS
         // ============================================
-        console.log("\n🔍 Step 3: Handling Package Changes...");
-        let newPackageData = null;
+        console.log("\n🔍 Step 3: Validating New Packages...");
+        let newPackageItemsData = [];
         let hasPackage = false;
-        let selectedPackage = null;
-        let packageFinalPrice = 0;
-        let packageDiscountAmount = 0;
-        let validatedXPOils = [];
-        let validatedFragranceBaseML = 0;
+        let packageFinalPriceTotal = 0;
+        let packageDiscountTotal = 0;
 
-        if (packageId) {
-            console.log("  📦 New Package ID:", packageId);
-            selectedPackage = await Package.findOne({ packageId, isActive: true });
-            if (!selectedPackage) {
-                console.log("❌ Package not found or inactive:", packageId);
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Update',
-                    heading: 'Invoice Update Failed',
-                    description: 'Package not found or inactive'
-                });
-                return res.status(404).json({
-                    message: "Package not found or inactive"
-                });
+        if (packageItems && packageItems.length > 0) {
+            console.log("  📦 Total New Packages:", packageItems.length);
+
+            // ============================================
+            // ✅ AGGREGATE STOCK DEMAND — only for NEW or CHANGED packages
+            // ============================================
+            const aggregatedXP = {};
+            let aggregatedFragranceBaseML = 0;
+            const aggregatedBottles = {};
+
+            // First determine which items need to be "reduced"
+            const itemsNeedingReduction = [];
+
+            for (const pkgInput of packageItems) {
+                const qty = parseInt(pkgInput.quantity) || 1;
+                const incomingLineId = pkgInput.lineId || null;
+
+                // Check if this is unchanged vs old
+                let isUnchanged = false;
+                if (incomingLineId && oldByLineId[incomingLineId]) {
+                    const oldPkg = oldByLineId[incomingLineId];
+                    // Compare: packageId, qty, discount, fragranceBaseML, xpOilItems
+                    const oldQty = oldPkg.quantity || 1;
+                    const oldXp = (oldPkg.xpOilItems || []).map(x => ({ xpId: x.xpId, ml: x.ml })).sort((a, b) => a.xpId.localeCompare(b.xpId));
+                    const newXp = (pkgInput.xpOilItems || []).map(x => ({ xpId: x.xpId, ml: parseFloat(x.ml) })).sort((a, b) => a.xpId.localeCompare(b.xpId));
+
+                    const xpEqual = oldXp.length === newXp.length && oldXp.every((o, idx) => o.xpId === newXp[idx].xpId && o.ml === newXp[idx].ml);
+                    const otherEqual =
+                        oldPkg.packageId === pkgInput.packageId &&
+                        oldQty === qty &&
+                        (oldPkg.discount || 0) === (pkgInput.discount || 0) &&
+                        (oldPkg.alcoholQty || 0) === parseFloat(pkgInput.fragranceBaseML || 0);
+
+                    if (xpEqual && otherEqual) {
+                        isUnchanged = true;
+                    }
+                }
+
+                if (isUnchanged) {
+                    console.log(`  ℹ️ Package unchanged (lineId: ${incomingLineId})`);
+                    // Still need to compute pricing for the invoice total
+                    const selectedPackage = await Package.findOne({ packageId: pkgInput.packageId, isActive: true });
+                    if (!selectedPackage) {
+                        console.log("❌ Package not found or inactive:", pkgInput.packageId);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Update',
+                            heading: 'Invoice Update Failed',
+                            description: `Package not found or inactive: ${pkgInput.packageId}`
+                        });
+                        return res.status(404).json({
+                            message: `Package not found or inactive: ${pkgInput.packageId}`
+                        });
+                    }
+
+                    const pkgDiscountPercent = pkgInput.discount !== undefined ? pkgInput.discount : selectedPackage.discount || 0;
+                    const pkgDiscountAmount = (selectedPackage.pricing * pkgDiscountPercent) / 100;
+                    const pkgFinalPrice = selectedPackage.pricing - pkgDiscountAmount;
+
+                    packageDiscountTotal += pkgDiscountAmount * qty;
+                    packageFinalPriceTotal += pkgFinalPrice * qty;
+
+                    // Build validated xp oils (from old, unchanged)
+                    const validatedXPOils = [];
+                    for (const x of (pkgInput.xpOilItems || [])) {
+                        const xpOil = await XPInventory.findOne({ xpId: x.xpId });
+                        if (!xpOil) {
+                            console.log("❌ XP Oil not found:", x.xpId);
+                            await logFailed({
+                                module: 'Invoice',
+                                userId: req.user.userId,
+                                userName: req.user.name,
+                                userEmail: req.user.email,
+                                action: 'Update',
+                                heading: 'Invoice Update Failed',
+                                description: `XP Oil not found: ${x.xpId}`
+                            });
+                            return res.status(404).json({
+                                message: `XP Oil not found: ${x.xpId}`
+                            });
+                        }
+                        const mlValue = parseFloat(x.ml);
+                        validatedXPOils.push({
+                            xpId: xpOil.xpId,
+                            productName: xpOil.productName,
+                            ml: mlValue,
+                            quantityInKG: mlValue / (xpOil.density || 1000),
+                            density: xpOil.density || 1000,
+                            pricePerKG: xpOil.avgPurchasePrice || 0
+                        });
+                    }
+
+                    newPackageItemsData.push({
+                        lineId: incomingLineId,  // preserve original lineId
+                        packageId: selectedPackage.packageId,
+                        packageName: selectedPackage.packageName,
+                        pricing: selectedPackage.pricing,
+                        oilCount: selectedPackage.oilCount,
+                        quantity: qty,
+                        discount: pkgDiscountPercent,
+                        discountAmount: pkgDiscountAmount,
+                        finalPrice: pkgFinalPrice,
+                        bottleML: selectedPackage.bottleML,
+                        fillingLevel: selectedPackage.fillingLevel,
+                        fragranceQty: validatedXPOils.reduce((s, o) => s + o.ml, 0),
+                        alcoholQty: parseFloat(pkgInput.fragranceBaseML || 0),
+                        xpOilItems: validatedXPOils,
+                        xpOil: validatedXPOils.length > 0 ? {
+                            xpId: validatedXPOils[0].xpId,
+                            productName: validatedXPOils[0].productName,
+                            quantity: validatedXPOils[0].quantityInKG,
+                            density: validatedXPOils[0].density
+                        } : null
+                    });
+                    continue;
+                }
+
+                // This item needs reduction — add to aggregation
+                itemsNeedingReduction.push(pkgInput);
             }
-            console.log("  ✅ New Package found:", selectedPackage.packageName);
 
-            const xpOilItemsFromRequest = xpOilItems || [];
-
-            if (!xpOilItemsFromRequest || xpOilItemsFromRequest.length === 0) {
-                console.log("❌ No XP Oil items provided");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Update',
-                    heading: 'Invoice Update Failed',
-                    description: 'At least one XP Oil is required when package is selected'
-                });
-                return res.status(400).json({
-                    message: "At least one XP Oil is required when package is selected"
-                });
+            // Aggregate demand for items needing reduction
+            for (const pkgInput of itemsNeedingReduction) {
+                const qty = parseInt(pkgInput.quantity) || 1;
+                for (const xp of (pkgInput.xpOilItems || [])) {
+                    if (xp.xpId) {
+                        const ml = parseFloat(xp.ml) || 0;
+                        aggregatedXP[xp.xpId] = (aggregatedXP[xp.xpId] || 0) + (ml * qty);
+                    }
+                }
+                if (pkgInput.fragranceBaseML) {
+                    aggregatedFragranceBaseML += (parseFloat(pkgInput.fragranceBaseML) || 0) * qty;
+                }
             }
 
-            // ✅ Validate fragranceBaseML (must be > 0)
-            if (fragranceBaseML === undefined || fragranceBaseML === null || parseFloat(fragranceBaseML) <= 0) {
-                console.log("❌ Invalid Fragrance Base ML:", fragranceBaseML);
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Update',
-                    heading: 'Invoice Update Failed',
-                    description: 'Fragrance Base ML must be greater than 0'
-                });
-                return res.status(400).json({
-                    message: "Fragrance Base ML must be greater than 0"
-                });
-            }
+            // ============================================
+            // ✅ AGGREGATED STOCK VALIDATION (only for items needing reduction)
+            // ============================================
+            console.log("\n🔍 Aggregated Stock Validation (for new/changed items)...");
 
-            validatedFragranceBaseML = parseFloat(fragranceBaseML);
-
-            let totalXPMl = 0;
-
-            for (const xpItem of xpOilItemsFromRequest) {
-                const { xpId, ml } = xpItem;
-
-                if (!xpId) {
-                    console.log("❌ XP Oil ID missing for an item");
+            if (aggregatedFragranceBaseML > 0) {
+                const totalAlcoholKG = aggregatedFragranceBaseML / 820;
+                const alcoholProduct = await XPInventory.findOne({ productName: "FRAGRANCE BASE" });
+                if (!alcoholProduct) {
+                    console.log("❌ FRAGRANCE BASE not found");
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1804,15 +2025,14 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: 'XP Oil ID is required for each oil'
+                        description: 'FRAGRANCE BASE not found in inventory'
                     });
-                    return res.status(400).json({
-                        message: "XP Oil ID is required for each oil"
+                    return res.status(404).json({
+                        message: "FRAGRANCE BASE not found in inventory"
                     });
                 }
-
-                if (!ml || parseFloat(ml) <= 0) {
-                    console.log("❌ Invalid ML for XP Oil:", ml);
+                if (alcoholProduct.quantity < totalAlcoholKG) {
+                    console.log("❌ Insufficient Fragrance Base stock");
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1820,13 +2040,17 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: 'ML must be greater than 0 for each XP Oil'
+                        description: `Insufficient Fragrance Base stock. Available: ${alcoholProduct.quantity} KG, Required: ${totalAlcoholKG} KG`
                     });
                     return res.status(400).json({
-                        message: "ML must be greater than 0 for each XP Oil"
+                        message: `Insufficient Fragrance Base stock. Available: ${alcoholProduct.quantity} KG, Required: ${totalAlcoholKG} KG (${aggregatedFragranceBaseML} ML)`
                     });
                 }
+                console.log("  ✅ Fragrance Base stock sufficient");
+            }
 
+            for (const [xpId, totalML] of Object.entries(aggregatedXP)) {
+                if (totalML <= 0) continue;
                 const xpOil = await XPInventory.findOne({ xpId });
                 if (!xpOil) {
                     console.log("❌ XP Oil not found:", xpId);
@@ -1843,74 +2067,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         message: `XP Oil not found: ${xpId}`
                     });
                 }
-
-                const mlValue = parseFloat(ml);
-                totalXPMl += mlValue;
-
-                validatedXPOils.push({
-                    xpId: xpOil.xpId,
-                    productName: xpOil.productName,
-                    ml: mlValue,
-                    quantityInKG: mlValue / (xpOil.density || 1000),
-                    density: xpOil.density || 1000,
-                    pricePerKG: xpOil.avgPurchasePrice || 0
-                });
-
-                console.log(`  ✅ XP Oil: ${xpOil.productName}, ML: ${mlValue}ml`);
-            }
-
-            console.log(`  📊 Total XP ML: ${totalXPMl}ml`);
-            console.log(`  🍷 Fragrance Base ML: ${validatedFragranceBaseML}ml`);
-
-            // ✅ Stock check for Fragrance Base using user-entered ML
-            const alcoholKG = validatedFragranceBaseML / 820;
-            console.log("  🍷 Fragrance Base Required:", validatedFragranceBaseML, "ml (", alcoholKG, "KG)");
-            const alcoholProduct = await XPInventory.findOne({
-                productName: "FRAGRANCE BASE"
-            });
-
-            if (!alcoholProduct) {
-                console.log("❌ FRAGRANCE BASE not found");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Update',
-                    heading: 'Invoice Update Failed',
-                    description: 'FRAGRANCE BASE not found in inventory'
-                });
-                return res.status(404).json({
-                    message: "FRAGRANCE BASE not found in inventory"
-                });
-            }
-
-            if (alcoholProduct.quantity < alcoholKG) {
-                console.log("❌ Insufficient Fragrance Base stock. Available:", alcoholProduct.quantity, "KG, Required:", alcoholKG, "KG");
-                await logFailed({
-                    module: 'Invoice',
-                    userId: req.user.userId,
-                    userName: req.user.name,
-                    userEmail: req.user.email,
-                    action: 'Update',
-                    heading: 'Invoice Update Failed',
-                    description: `Insufficient Alcohol stock. Available: ${alcoholProduct.quantity} KG, Required: ${alcoholKG} KG (${validatedFragranceBaseML} ML)`
-                });
-                return res.status(400).json({
-                    message: `Insufficient Alcohol stock. Available: ${alcoholProduct.quantity} KG, Required: ${alcoholKG} KG (${validatedFragranceBaseML} ML)`
-                });
-            }
-            console.log("  ✅ Alcohol stock sufficient");
-
-            const mlSize = selectedPackage.bottleML.toString();
-            console.log("  🧴 Bottle ML:", mlSize, "ml");
-            const bottleItems = (mlSize === '3' || mlSize === '6')
-                ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                : ['Bottle', 'Cap', 'Pump', 'Box'];
-            for (const itemType of bottleItems) {
-                const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
-                if (!bottleStock || bottleStock.quantity < 1) {
-                    console.log(`❌ Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`);
+                const requiredKG = totalML / (xpOil.density || 1000);
+                if (xpOil.quantity < requiredKG) {
+                    console.log(`❌ Insufficient stock for ${xpOil.productName}`);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1918,69 +2077,262 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`
+                        description: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                     return res.status(400).json({
-                        message: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}`
+                        message: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                 }
-                console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
+            }
+            console.log("  ✅ All XP Oils stock sufficient");
+
+            // Bottles — aggregate mlSize demand from itemsNeedingReduction
+            for (const pkgInput of itemsNeedingReduction) {
+                const qty = parseInt(pkgInput.quantity) || 1;
+                const selectedPackage = await Package.findOne({ packageId: pkgInput.packageId, isActive: true });
+                if (!selectedPackage) continue;
+                const mlSize = selectedPackage.bottleML.toString();
+                aggregatedBottles[mlSize] = (aggregatedBottles[mlSize] || 0) + qty;
             }
 
-            const discountPercent = packageDiscount !== undefined ? packageDiscount : selectedPackage.discount || 0;
-            packageDiscountAmount = (selectedPackage.pricing * discountPercent) / 100;
-            packageFinalPrice = selectedPackage.pricing - packageDiscountAmount;
+            for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
+                const bottleItems = (mlSize === '3' || mlSize === '6')
+                    ? ['Bottle', 'Cap', 'Roll on', 'Box']
+                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+                for (const itemType of bottleItems) {
+                    const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
+                    if (!bottleStock || bottleStock.quantity < totalQty) {
+                        console.log(`❌ Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Update',
+                            heading: 'Invoice Update Failed',
+                            description: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`
+                        });
+                        return res.status(400).json({
+                            message: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${totalQty}`
+                        });
+                    }
+                }
+            }
+            console.log("  ✅ All bottle stock sufficient");
 
-            console.log("  💰 Package Original Price:", selectedPackage.pricing);
-            console.log("  💰 Package Discount:", discountPercent, "% (₹", packageDiscountAmount, ")");
-            console.log("  💰 Package Final Price:", packageFinalPrice);
+            // ============================================
+            // Now loop itemsNeedingReduction, validate individually + build packageItemsData
+            // ============================================
+            for (let idx = 0; idx < itemsNeedingReduction.length; idx++) {
+                const pkgInput = itemsNeedingReduction[idx];
+                const { packageId, xpOilItems, fragranceBaseML, discount, lineId } = pkgInput;
+                const qty = parseInt(pkgInput.quantity) || 1;
 
-            newPackageData = {
-                packageId: selectedPackage.packageId,
-                packageName: selectedPackage.packageName,
-                pricing: selectedPackage.pricing,
-                oilCount: selectedPackage.oilCount,
-                discount: discountPercent,
-                discountAmount: packageDiscountAmount,
-                finalPrice: packageFinalPrice,
-                bottleML: selectedPackage.bottleML,
-                fillingLevel: selectedPackage.fillingLevel,
-                // ✅ CHANGED: Use actual total XP ML
-                fragranceQty: totalXPMl,
-                // ✅ CHANGED: Use user-entered Fragrance Base ML
-                alcoholQty: validatedFragranceBaseML,
-                xpOilItems: validatedXPOils,
-                xpOil: validatedXPOils.length > 0 ? {
-                    xpId: validatedXPOils[0].xpId,
-                    productName: validatedXPOils[0].productName,
-                    quantity: validatedXPOils[0].quantityInKG,
-                    density: validatedXPOils[0].density
-                } : null
-            };
+                console.log(`\n  📦 New/Changed Package ${idx + 1}/${itemsNeedingReduction.length}:`);
+                console.log(`    Package ID: ${packageId}`);
+                console.log(`    Quantity: ${qty}`);
+                console.log(`    LineId (incoming): ${lineId || 'NEW'}`);
+
+                if (!packageId) {
+                    console.log("❌ Package ID missing");
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Update',
+                        heading: 'Invoice Update Failed',
+                        description: 'Package ID is required for each package'
+                    });
+                    return res.status(400).json({
+                        message: "Package ID is required for each package"
+                    });
+                }
+
+                const selectedPackage = await Package.findOne({ packageId, isActive: true });
+                if (!selectedPackage) {
+                    console.log("❌ Package not found or inactive:", packageId);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Update',
+                        heading: 'Invoice Update Failed',
+                        description: `Package not found or inactive: ${packageId}`
+                    });
+                    return res.status(404).json({
+                        message: `Package not found or inactive: ${packageId}`
+                    });
+                }
+
+                if (qty < 1) {
+                    console.log("❌ Invalid quantity:", qty);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Update',
+                        heading: 'Invoice Update Failed',
+                        description: 'Package quantity must be at least 1'
+                    });
+                    return res.status(400).json({
+                        message: "Package quantity must be at least 1"
+                    });
+                }
+
+                const xpOilItemsFromRequest = xpOilItems || [];
+                if (xpOilItemsFromRequest.length === 0) {
+                    console.log("❌ No XP Oil items provided for this package");
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Update',
+                        heading: 'Invoice Update Failed',
+                        description: 'At least one XP Oil is required for each package'
+                    });
+                    return res.status(400).json({
+                        message: "At least one XP Oil is required for each package"
+                    });
+                }
+
+                if (fragranceBaseML === undefined || fragranceBaseML === null || parseFloat(fragranceBaseML) <= 0) {
+                    console.log("❌ Invalid Fragrance Base ML:", fragranceBaseML);
+                    await logFailed({
+                        module: 'Invoice',
+                        userId: req.user.userId,
+                        userName: req.user.name,
+                        userEmail: req.user.email,
+                        action: 'Update',
+                        heading: 'Invoice Update Failed',
+                        description: 'Fragrance Base ML must be greater than 0'
+                    });
+                    return res.status(400).json({
+                        message: "Fragrance Base ML must be greater than 0"
+                    });
+                }
+
+                const validatedFragranceBaseML = parseFloat(fragranceBaseML);
+
+                let totalXPMl = 0;
+                let validatedXPOils = [];
+
+                for (const xpItem of xpOilItemsFromRequest) {
+                    const { xpId, ml } = xpItem;
+
+                    if (!xpId) {
+                        console.log("❌ XP Oil ID missing");
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Update',
+                            heading: 'Invoice Update Failed',
+                            description: 'XP Oil ID is required for each oil'
+                        });
+                        return res.status(400).json({
+                            message: "XP Oil ID is required for each oil"
+                        });
+                    }
+
+                    if (!ml || parseFloat(ml) <= 0) {
+                        console.log("❌ Invalid ML for XP Oil:", ml);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Update',
+                            heading: 'Invoice Update Failed',
+                            description: 'ML must be greater than 0 for each XP Oil'
+                        });
+                        return res.status(400).json({
+                            message: "ML must be greater than 0 for each XP Oil"
+                        });
+                    }
+
+                    const xpOil = await XPInventory.findOne({ xpId });
+                    if (!xpOil) {
+                        console.log("❌ XP Oil not found:", xpId);
+                        await logFailed({
+                            module: 'Invoice',
+                            userId: req.user.userId,
+                            userName: req.user.name,
+                            userEmail: req.user.email,
+                            action: 'Update',
+                            heading: 'Invoice Update Failed',
+                            description: `XP Oil not found: ${xpId}`
+                        });
+                        return res.status(404).json({
+                            message: `XP Oil not found: ${xpId}`
+                        });
+                    }
+
+                    const mlValue = parseFloat(ml);
+                    totalXPMl += mlValue;
+
+                    validatedXPOils.push({
+                        xpId: xpOil.xpId,
+                        productName: xpOil.productName,
+                        ml: mlValue,
+                        quantityInKG: mlValue / (xpOil.density || 1000),
+                        density: xpOil.density || 1000,
+                        pricePerKG: xpOil.avgPurchasePrice || 0
+                    });
+                }
+
+                const pkgDiscountPercent = discount !== undefined ? discount : selectedPackage.discount || 0;
+                const pkgDiscountAmount = (selectedPackage.pricing * pkgDiscountPercent) / 100;
+                const pkgFinalPrice = selectedPackage.pricing - pkgDiscountAmount;
+
+                packageDiscountTotal += pkgDiscountAmount * qty;
+                packageFinalPriceTotal += pkgFinalPrice * qty;
+
+                newPackageItemsData.push({
+                    lineId: lineId || null,   // preserve if given, schema will generate if null
+                    packageId: selectedPackage.packageId,
+                    packageName: selectedPackage.packageName,
+                    pricing: selectedPackage.pricing,
+                    oilCount: selectedPackage.oilCount,
+                    quantity: qty,
+                    discount: pkgDiscountPercent,
+                    discountAmount: pkgDiscountAmount,
+                    finalPrice: pkgFinalPrice,
+                    bottleML: selectedPackage.bottleML,
+                    fillingLevel: selectedPackage.fillingLevel,
+                    fragranceQty: totalXPMl,
+                    alcoholQty: validatedFragranceBaseML,
+                    xpOilItems: validatedXPOils,
+                    xpOil: validatedXPOils.length > 0 ? {
+                        xpId: validatedXPOils[0].xpId,
+                        productName: validatedXPOils[0].productName,
+                        quantity: validatedXPOils[0].quantityInKG,
+                        density: validatedXPOils[0].density
+                    } : null
+                });
+            }
+
             hasPackage = true;
-            changes.package.new = newPackageData;
-            changes.xpOilItems.new = validatedXPOils;
-            console.log("  ✅ New package data prepared with", validatedXPOils.length, "XP Oils");
-            console.log("  📊 Fragrance Qty (actual):", totalXPMl, "ml");
-            console.log("  🍷 Fragrance Base (user):", validatedFragranceBaseML, "ml");
         } else {
-            console.log("  ℹ️ No new package provided");
+            console.log("  ℹ️ No packages in update");
         }
 
         // ============================================
-        // 4. HANDLE DISPENSER CHANGES - UPDATED TO USE XP ID
+        // 4. VALIDATE NEW DISPENSERS
         // ============================================
-        console.log("\n🔍 Step 4: Handling Dispenser Changes (using XP ID)...");
+        console.log("\n🔍 Step 4: Validating New Dispenser Items...");
         let newDispenserItems = [];
         let hasDispenser = false;
         let dispenserSubtotal = 0;
         let totalDispenserDiscount = 0;
 
         if (dispenserItems && dispenserItems.length > 0) {
-            console.log("  💧 New Dispenser Items:", dispenserItems.length);
             for (const item of dispenserItems) {
                 const { xpId, ml, quantity, unitPrice, discount } = item;
-                console.log(`  📦 Item: XP ID: ${xpId} | ML: ${ml} | Qty: ${quantity} | Unit Price: ${unitPrice} | Discount: ${discount}%`);
 
                 if (!xpId || !ml || !quantity) {
                     console.log("❌ Missing dispenser item fields");
@@ -1999,7 +2351,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 }
 
                 if (![3, 6].includes(ml)) {
-                    console.log("❌ Invalid ML:", ml, "Must be 3 or 6");
+                    console.log("❌ Invalid ML:", ml);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -2015,7 +2367,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 }
 
                 if (quantity < 1) {
-                    console.log("❌ Invalid quantity:", quantity, "Must be at least 1");
+                    console.log("❌ Invalid quantity:", quantity);
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -2046,12 +2398,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         message: `XP Oil not found: ${xpId}`
                     });
                 }
-                console.log(`  ✅ XP Oil found: ${xpOil.productName}`);
 
                 const totalML = ml * quantity;
                 const requiredKG = totalML / 1000;
-                console.log(`  📊 Total ML: ${totalML}ml | Required KG: ${requiredKG}KG`);
-                console.log(`  📦 Current Stock: ${xpOil.quantity}KG`);
 
                 if (xpOil.quantity < requiredKG) {
                     console.log(`❌ Insufficient stock. Available: ${xpOil.quantity}KG, Required: ${requiredKG}KG`);
@@ -2068,7 +2417,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         message: `Insufficient stock for ${xpOil.productName}. Available: ${xpOil.quantity} KG, Required: ${requiredKG} KG (${totalML} ML)`
                     });
                 }
-                console.log(`  ✅ Stock sufficient`);
 
                 const mlSize = ml.toString();
                 const bottleItems = (mlSize === '3' || mlSize === '6')
@@ -2085,13 +2433,12 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                             userEmail: req.user.email,
                             action: 'Update',
                             heading: 'Invoice Update Failed',
-                            description: `Insufficient ${mlSize}ml ${itemType} stock for dispenser. Available: ${bottleStock?.quantity || 0}, Required: ${quantity}`
+                            description: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${quantity}`
                         });
                         return res.status(400).json({
-                            message: `Insufficient ${mlSize}ml ${itemType} stock for dispenser. Available: ${bottleStock?.quantity || 0}, Required: ${quantity}`
+                            message: `Insufficient ${mlSize}ml ${itemType} stock. Available: ${bottleStock?.quantity || 0}, Required: ${quantity}`
                         });
                     }
-                    console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
                 const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
@@ -2101,12 +2448,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 const originalTotal = baseUnitPrice * quantity;
                 const discountAmount = (originalTotal * itemDiscountPercent) / 100;
                 const finalPrice = originalTotal - discountAmount;
-
-                console.log(`  💰 DB Price: ₹${dbPrice}/ml`);
-                console.log(`  💰 Using Unit Price: ₹${baseUnitPrice}/ml`);
-                console.log(`  💰 Original Total: ₹${originalTotal}`);
-                console.log(`  💰 Discount: ${itemDiscountPercent}% (₹${discountAmount})`);
-                console.log(`  💰 Final Price: ₹${finalPrice}`);
 
                 newDispenserItems.push({
                     xpId: xpOil.xpId,
@@ -2127,357 +2468,210 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 totalDispenserDiscount += discountAmount;
                 hasDispenser = true;
             }
-            changes.dispenser.new = newDispenserItems;
-            console.log("  ✅ New dispenser items prepared");
         } else {
-            console.log("  ℹ️ No new dispenser items provided");
+            console.log("  ℹ️ No dispenser items provided");
         }
 
         // ============================================
         // 5. EXECUTE INVENTORY ROLLBACK AND NEW REDUCTIONS
         // ============================================
-        console.log("\n🔍 Step 5: Executing Inventory Rollback...");
+        console.log("\n🔍 Step 5: Executing Inventory Rollback + Reductions...");
         const inventoryChanges = [];
 
-        // 5a. Handle Package/XP Oil Changes
-        if (originalInvoice.hasPackage) {
-            const oldPackage = originalInvoice.packageItem;
-            const oldXPOilItems = oldPackage.xpOilItems || [];
-            console.log("  📦 Original Package exists:", oldPackage.packageName);
+        // 5a. Return ALL old packages (C4-ish for old, but new side only reduces changed/new)
+        //    Wait — we already diff'd. So we should return ONLY old packages that are:
+        //    - removed (lineId not present in new)
+        //    - OR changed (lineId present but content differs)
+        // ============================================
 
-            if (!hasPackage) {
-                console.log("  🔄 Package REMOVED - Returning all stock...");
-                if (oldXPOilItems.length > 0) {
-                    const returnResult = await returnMultipleXPOils(
-                        oldXPOilItems.map(item => ({ xpId: item.xpId, ml: item.ml })),
-                        req.user,
-                        invoiceNumber
-                    );
-                    inventoryChanges.push({ type: 'XP Oils Returned (Package Removed)', details: returnResult.results });
-                    console.log(`  ✅ ${returnResult.results.length} XP Oils returned: ${returnResult.totalML}ml total`);
-                }
+        // Build a map of new incoming lineIds
+        const newLineIdsSet = new Set(
+            packageItems.map(p => p.lineId).filter(Boolean)
+        );
 
-                // ✅ Uses old stored value (works for both old and new invoices)
+        // Also identify changed lineIds (those in both old and new, but content differs)
+        // Easier way: for each old package, if its lineId is either absent in new OR the new item is flagged as needing reduction → return old.
+        const changedLineIds = new Set(
+            (packageItems || [])
+                .filter(p => p.lineId && oldByLineId[p.lineId])
+                .filter(p => {
+                    const oldPkg = oldByLineId[p.lineId];
+                    const oldQty = oldPkg.quantity || 1;
+                    const oldXp = (oldPkg.xpOilItems || []).map(x => ({ xpId: x.xpId, ml: x.ml })).sort((a, b) => a.xpId.localeCompare(b.xpId));
+                    const newXp = (p.xpOilItems || []).map(x => ({ xpId: x.xpId, ml: parseFloat(x.ml) })).sort((a, b) => a.xpId.localeCompare(b.xpId));
+                    const xpEqual = oldXp.length === newXp.length && oldXp.every((o, i) => o.xpId === newXp[i].xpId && o.ml === newXp[i].ml);
+                    const otherEqual =
+                        oldPkg.packageId === p.packageId &&
+                        oldQty === (parseInt(p.quantity) || 1) &&
+                        (oldPkg.discount || 0) === (p.discount || 0) &&
+                        (oldPkg.alcoholQty || 0) === parseFloat(p.fragranceBaseML || 0);
+                    return !(xpEqual && otherEqual);
+                })
+                .map(p => p.lineId)
+        );
+
+        // Now loop OLD packages and decide: return or skip
+        for (const oldPkg of originalPackageItems) {
+            const oldLineId = oldPkg.lineId;
+
+            const isRemoved = !newLineIdsSet.has(oldLineId);
+            const isChanged = changedLineIds.has(oldLineId);
+
+            if (!isRemoved && !isChanged) {
+                console.log(`  ℹ️ Old package unchanged → skipping return (lineId: ${oldLineId})`);
+                continue;
+            }
+
+            const qty = oldPkg.quantity || 1;
+            const reason = isRemoved ? 'Removed' : 'Changed';
+            console.log(`  🔄 Old package ${reason}: ${oldPkg.packageName} (lineId: ${oldLineId}, qty ${qty})`);
+
+            // Return XP oils × qty
+            const xpItemsForReturn = (oldPkg.xpOilItems || []).map(x => ({
+                xpId: x.xpId,
+                ml: x.ml * qty
+            }));
+            if (xpItemsForReturn.length > 0) {
+                const returnResult = await returnMultipleXPOils(xpItemsForReturn, req.user, invoiceNumber);
+                inventoryChanges.push({ type: `XP Oils Returned (${reason})`, details: returnResult.results });
+                console.log(`  ✅ Returned ${returnResult.results.length} XP Oils: ${returnResult.totalML}ml`);
+            }
+
+            // Return Fragrance Base × qty
+            const totalFragranceToReturn = (oldPkg.alcoholQty || 0) * qty;
+            if (totalFragranceToReturn > 0) {
                 await returnAlcohol(
-                    oldPackage.alcoholQty,
+                    totalFragranceToReturn,
                     req.user,
-                    'Invoice Edit - Return',
-                    `Returned for invoice ${invoiceNumber} (Package removed: ${oldPackage.packageName})`
+                    `Invoice Edit - ${reason} - Return`,
+                    `Returned for invoice ${invoiceNumber} (Old package ${reason}: ${oldPkg.packageName})`
                 );
-                inventoryChanges.push({ type: 'Fragrance Base Returned', details: oldPackage.alcoholQty });
-                console.log(`  ✅ Fragrance Base returned: ${oldPackage.alcoholQty}ml`);
-
-                await returnBottlesInventory(
-                    oldPackage.bottleML.toString(),
-                    1,
-                    req.user,
-                    'Invoice Edit - Return',
-                    `Returned for invoice ${invoiceNumber} (Package removed: ${oldPackage.packageName})`
-                );
-                inventoryChanges.push({ type: 'Bottles Returned - Package', details: oldPackage.bottleML });
-                console.log(`  ✅ Bottles returned: ${oldPackage.bottleML}ml`);
-
-            } else {
-                // ============================================
-                // Handle Bottle Change when Package is changed
-                // ============================================
-                const oldBottleML = oldPackage.bottleML.toString();
-                const newBottleML = selectedPackage.bottleML.toString();
-
-                if (oldBottleML !== newBottleML) {
-                    console.log(`  🧴 Bottle changed: ${oldBottleML}ml → ${newBottleML}ml`);
-
-                    await returnBottlesInventory(
-                        oldBottleML,
-                        1,
-                        req.user,
-                        'Invoice Edit - Package Changed',
-                        `Returned old bottle ${oldBottleML}ml for invoice ${invoiceNumber} (Package changed: ${oldPackage.packageName} → ${selectedPackage.packageName})`
-                    );
-                    inventoryChanges.push({ type: 'Bottles Returned (Package Changed - Old)', details: { oldBottleML, newBottleML } });
-                    console.log(`  ✅ Old ${oldBottleML}ml bottle returned`);
-
-                    await reduceBottlesInventory(
-                        newBottleML,
-                        1,
-                        req.user,
-                        'Invoice Edit - Package Changed',
-                        `Reduced new bottle ${newBottleML}ml for invoice ${invoiceNumber} (Package changed: ${oldPackage.packageName} → ${selectedPackage.packageName})`
-                    );
-                    inventoryChanges.push({ type: 'Bottles Reduced (Package Changed - New)', details: { oldBottleML, newBottleML } });
-                    console.log(`  ✅ New ${newBottleML}ml bottle reduced`);
-                } else {
-                    console.log(`  ℹ️ Bottle size unchanged: ${oldBottleML}ml`);
-                }
-
-                // ============================================
-                // ✅ NEW: Handle Fragrance Base change (using OLD stored value vs NEW user-entered value)
-                // ============================================
-                const oldFragranceBaseML = oldPackage.alcoholQty || 0;
-                const newFragranceBaseML = validatedFragranceBaseML;
-
-                if (oldFragranceBaseML !== newFragranceBaseML) {
-                    console.log(`  🍷 Fragrance Base changed: ${oldFragranceBaseML}ml → ${newFragranceBaseML}ml`);
-
-                    // Return OLD
-                    await returnAlcohol(
-                        oldFragranceBaseML,
-                        req.user,
-                        'Invoice Edit - Fragrance Base Changed',
-                        `Returned old Fragrance Base ${oldFragranceBaseML}ml for invoice ${invoiceNumber}`
-                    );
-                    inventoryChanges.push({ type: 'Fragrance Base Returned (Changed - Old)', details: oldFragranceBaseML });
-                    console.log(`  ✅ Old Fragrance Base returned: ${oldFragranceBaseML}ml`);
-
-                    // Reduce NEW
-                    await reduceAlcohol(
-                        newFragranceBaseML,
-                        req.user,
-                        'Invoice Edit - Fragrance Base Changed',
-                        `Reduced new Fragrance Base ${newFragranceBaseML}ml for invoice ${invoiceNumber}`
-                    );
-                    inventoryChanges.push({ type: 'Fragrance Base Reduced (Changed - New)', details: newFragranceBaseML });
-                    console.log(`  ✅ New Fragrance Base reduced: ${newFragranceBaseML}ml`);
-                } else {
-                    console.log(`  ℹ️ Fragrance Base unchanged: ${oldFragranceBaseML}ml`);
-                }
-
-                // ============================================
-                // Existing XP Oil Change Code
-                // ============================================
-                const oldXPOilMap = new Map();
-                for (const item of oldXPOilItems) {
-                    oldXPOilMap.set(item.xpId, item);
-                }
-
-                const newXPOilMap = new Map();
-                for (const item of validatedXPOils) {
-                    newXPOilMap.set(item.xpId, item);
-                }
-
-                for (const [xpId, oldItem] of oldXPOilMap) {
-                    if (!newXPOilMap.has(xpId)) {
-                        console.log(`  🔄 XP Oil REMOVED: ${oldItem.productName} (${oldItem.ml}ml)`);
-                        await returnXPOil(
-                            oldItem.xpId,
-                            oldItem.ml,
-                            req.user,
-                            'Invoice Edit - Return',
-                            `Returned for invoice ${invoiceNumber} (XP Oil removed: ${oldItem.productName})`
-                        );
-                        inventoryChanges.push({ type: 'XP Oil Returned (Removed)', details: oldItem });
-                        console.log(`  ✅ XP Oil returned: ${oldItem.productName}`);
-                    }
-                }
-
-                for (const [xpId, newItem] of newXPOilMap) {
-                    const oldItem = oldXPOilMap.get(xpId);
-                    if (!oldItem) {
-                        console.log(`  ➕ XP Oil ADDED: ${newItem.productName} (${newItem.ml}ml)`);
-                        await reduceXPOil(
-                            newItem.xpId,
-                            newItem.ml,
-                            req.user,
-                            'Invoice Edit - New Reduction',
-                            `Reduced for invoice ${invoiceNumber} (New XP Oil: ${newItem.productName})`
-                        );
-                        inventoryChanges.push({ type: 'XP Oil Reduced (Added)', details: newItem });
-                        console.log(`  ✅ XP Oil reduced: ${newItem.productName}`);
-                    } else if (oldItem.ml !== newItem.ml) {
-                        console.log(`  🔄 XP Oil CHANGED: ${oldItem.productName} (${oldItem.ml}ml → ${newItem.ml}ml)`);
-                        await returnXPOil(
-                            oldItem.xpId,
-                            oldItem.ml,
-                            req.user,
-                            'Invoice Edit - Return',
-                            `Returned for invoice ${invoiceNumber} (XP Oil changed: ${oldItem.productName})`
-                        );
-                        inventoryChanges.push({ type: 'XP Oil Returned (Changed)', details: oldItem });
-                        console.log(`  ✅ Old XP Oil returned: ${oldItem.productName}`);
-
-                        await reduceXPOil(
-                            newItem.xpId,
-                            newItem.ml,
-                            req.user,
-                            'Invoice Edit - New Reduction',
-                            `Reduced for invoice ${invoiceNumber} (New XP Oil: ${newItem.productName})`
-                        );
-                        inventoryChanges.push({ type: 'XP Oil Reduced (Changed)', details: newItem });
-                        console.log(`  ✅ New XP Oil reduced: ${newItem.productName}`);
-                    } else {
-                        console.log(`  ℹ️ XP Oil unchanged: ${oldItem.productName}`);
-                    }
-                }
+                inventoryChanges.push({ type: `Fragrance Base Returned (${reason})`, details: totalFragranceToReturn });
+                console.log(`  ✅ Returned Fragrance Base: ${totalFragranceToReturn}ml`);
             }
-        } else if (hasPackage) {
-            console.log("  📦 New Package added - Reducing stock...");
-        }
 
-        // 5b. Handle Dispenser Changes - DIFFERENCE LOGIC
-        console.log("\n  💧 Handling Dispenser Changes (using XP ID)...");
-        const oldDispenserItems = originalInvoice.dispenserItems || [];
-        const newDispenserMap = new Map();
-        const oldDispenserMap = new Map();
-
-        for (const item of newDispenserItems) {
-            const key = `${item.xpId}-${item.ml}`;
-            newDispenserMap.set(key, item);
-        }
-
-        for (const item of oldDispenserItems) {
-            const key = `${item.xpId}-${item.ml}`;
-            oldDispenserMap.set(key, item);
-        }
-
-        console.log(`  📊 Old dispensers: ${oldDispenserMap.size}, New dispensers: ${newDispenserMap.size}`);
-
-        for (const [key, oldItem] of oldDispenserMap) {
-            if (!newDispenserMap.has(key)) {
-                console.log(`  🔄 Dispenser REMOVED: ${oldItem.productName}`);
-                await returnXPOil(
-                    oldItem.xpId,
-                    oldItem.totalML || (oldItem.ml * oldItem.quantity),
-                    req.user,
-                    'Invoice Edit - Return',
-                    `Returned for invoice ${invoiceNumber} (Dispenser removed: ${oldItem.productName})`
-                );
-                inventoryChanges.push({ type: 'XP Oil Returned (Dispenser Removed)', details: oldItem });
-                console.log(`  ✅ XP Oil returned: ${oldItem.productName}`);
-
-                await returnBottlesInventory(
-                    oldItem.ml.toString(),
-                    oldItem.quantity,
-                    req.user,
-                    'Invoice Edit - Return',
-                    `Returned for invoice ${invoiceNumber} (Bottles for removed dispenser: ${oldItem.productName})`
-                );
-                inventoryChanges.push({ type: 'Bottles Returned (Removed)', details: oldItem });
-                console.log(`  ✅ Bottles returned for removed dispenser`);
-            }
-        }
-
-        for (const [key, newItem] of newDispenserMap) {
-            const oldItem = oldDispenserMap.get(key);
-            if (oldItem) {
-                if (oldItem.quantity !== newItem.quantity ||
-                    oldItem.discount !== newItem.discount ||
-                    oldItem.unitPrice !== newItem.unitPrice) {
-
-                    console.log(`  🔄 Dispenser CHANGED: ${oldItem.productName} | Qty: ${oldItem.quantity}→${newItem.quantity} | Unit Price: ${oldItem.unitPrice}→${newItem.unitPrice} | Discount: ${oldItem.discount}%→${newItem.discount}%`);
-
-                    const quantityDiff = oldItem.quantity - newItem.quantity;
-
-                    if (quantityDiff > 0) {
-                        console.log(`  📦 Returning ${quantityDiff} bottle(s) (quantity decreased)`);
-                        await returnBottlesInventory(
-                            oldItem.ml.toString(),
-                            quantityDiff,
-                            req.user,
-                            'Invoice Edit - Quantity Decreased',
-                            `Returned ${quantityDiff} bottle(s) for invoice ${invoiceNumber} (${oldItem.productName}: ${oldItem.quantity} → ${newItem.quantity})`
-                        );
-                        inventoryChanges.push({ type: 'Bottles Returned (Quantity Decreased)', details: { oldItem, newItem, diff: quantityDiff } });
-                    } else if (quantityDiff < 0) {
-                        const diff = Math.abs(quantityDiff);
-                        console.log(`  📦 Reducing ${diff} bottle(s) (quantity increased)`);
-                        await reduceBottlesInventory(
-                            newItem.ml.toString(),
-                            diff,
-                            req.user,
-                            'Invoice Edit - Quantity Increased',
-                            `Reduced ${diff} bottle(s) for invoice ${invoiceNumber} (${newItem.productName}: ${oldItem.quantity} → ${newItem.quantity})`
-                        );
-                        inventoryChanges.push({ type: 'Bottles Reduced (Quantity Increased)', details: { oldItem, newItem, diff } });
-                    } else {
-                        console.log(`  ℹ️ Quantity unchanged for ${oldItem.productName}`);
-                    }
-
-                    await returnXPOil(
-                        oldItem.xpId,
-                        oldItem.totalML || (oldItem.ml * oldItem.quantity),
-                        req.user,
-                        'Invoice Edit - Return',
-                        `Returned for invoice ${invoiceNumber} (Dispenser changed: ${oldItem.productName} | Old Qty: ${oldItem.quantity})`
-                    );
-                    inventoryChanges.push({ type: 'XP Oil Returned (Dispenser Changed)', details: oldItem });
-                    console.log(`  ✅ Old XP Oil returned`);
-
-                    await reduceXPOil(
-                        newItem.xpId,
-                        newItem.totalML || (newItem.ml * newItem.quantity),
-                        req.user,
-                        'Invoice Edit - New Reduction',
-                        `Reduced for invoice ${invoiceNumber} (New dispenser: ${newItem.productName} | Qty: ${newItem.quantity})`
-                    );
-                    inventoryChanges.push({ type: 'XP Oil Reduced (Dispenser New)', details: newItem });
-                    console.log(`  ✅ New XP Oil reduced`);
-
-                } else {
-                    console.log(`  ℹ️ Dispenser unchanged: ${oldItem.productName}`);
-                }
-            } else {
-                console.log(`  ➕ New dispenser ADDED: ${newItem.productName}`);
-                await reduceXPOil(
-                    newItem.xpId,
-                    newItem.totalML || (newItem.ml * newItem.quantity),
-                    req.user,
-                    'Invoice Edit - New Reduction',
-                    `Reduced for invoice ${invoiceNumber} (New dispenser added: ${newItem.productName})`
-                );
-                inventoryChanges.push({ type: 'XP Oil Reduced (Dispenser Added)', details: newItem });
-                console.log(`  ✅ New XP Oil reduced`);
-
-                await reduceBottlesInventory(
-                    newItem.ml.toString(),
-                    newItem.quantity,
-                    req.user,
-                    'Invoice Edit - New Reduction',
-                    `Reduced for invoice ${invoiceNumber} (Bottles for new dispenser: ${newItem.productName})`
-                );
-                inventoryChanges.push({ type: 'Bottles Reduced (Added)', details: newItem });
-                console.log(`  ✅ New bottles reduced`);
-            }
-        }
-
-        // 5c. Reduce new package stock if added (was no package before)
-        if (hasPackage && !originalInvoice.hasPackage) {
-            console.log("\n  📦 Reducing new package stock...");
-
-            const xpResult = await reduceMultipleXPOils(
-                validatedXPOils,
+            // Return Bottles × qty
+            await returnBottlesInventory(
+                oldPkg.bottleML.toString(),
+                qty,
                 req.user,
-                invoiceNumber
+                `Invoice Edit - ${reason} - Return`,
+                `Returned for invoice ${invoiceNumber} (Old package ${reason}: ${oldPkg.packageName})`
             );
-            inventoryChanges.push({ type: 'XP Oils Reduced (New Package)', details: xpResult.results });
-            console.log(`  ✅ ${xpResult.results.length} XP Oils reduced: ${xpResult.totalML}ml total`);
+            inventoryChanges.push({ type: `Bottles Returned (${reason})`, details: oldPkg.bottleML });
+            console.log(`  ✅ Returned Bottles: ${oldPkg.bottleML}ml × ${qty}`);
+        }
 
-            // ✅ CHANGED: Use user-entered Fragrance Base ML
+        // 5b. Reduce NEW packages (only new + changed — unchanged were already skipped in aggregation)
+        //     We need to reduce the NEW side for: items in newPackageItemsData whose lineId is either NEW (no old match) OR changed.
+        //     Actually, newPackageItemsData contains both unchanged (kept) and changed/new packages.
+        //     We want to reduce only the changed/new ones.
+        // ============================================
+        for (let i = 0; i < newPackageItemsData.length; i++) {
+            const pkg = newPackageItemsData[i];
+            const lineId = pkg.lineId;
+            const qty = pkg.quantity || 1;
+
+            // Skip unchanged (lineId exists in old AND not in changedLineIds)
+            const wasInOld = lineId && oldByLineId[lineId];
+            const wasChanged = lineId && changedLineIds.has(lineId);
+            const isBrandNew = !lineId || !oldByLineId[lineId];
+
+            if (wasInOld && !wasChanged) {
+                console.log(`  ℹ️ Skipping reduce for unchanged package (lineId: ${lineId})`);
+                continue;
+            }
+
+            console.log(`\n  📦 Reducing new/changed package: ${pkg.packageName} (qty ${qty})`);
+
+            // Reduce XP oils × qty
+            const xpItemsForReduction = pkg.xpOilItems.map(x => ({
+                xpId: x.xpId,
+                ml: x.ml * qty
+            }));
+            const xpResult = await reduceMultipleXPOils(xpItemsForReduction, req.user, invoiceNumber);
+            inventoryChanges.push({ type: `XP Oils Reduced`, details: xpResult.results });
+            console.log(`  ✅ Reduced ${xpResult.results.length} XP Oils: ${xpResult.totalML}ml`);
+
+            // Reduce Fragrance Base × qty
+            const totalFragrance = pkg.alcoholQty * qty;
             const alcoholResult = await reduceAlcohol(
-                validatedFragranceBaseML,
+                totalFragrance,
                 req.user,
-                'Invoice Edit - New Reduction',
-                `Reduced for invoice ${invoiceNumber} (New package: ${selectedPackage.packageName})`
+                'Invoice Edit - Reduction',
+                `Reduced for invoice ${invoiceNumber} (Package: ${pkg.packageName}, ${totalFragrance}ml)`
             );
-            inventoryChanges.push({ type: 'Fragrance Base Reduced (New Package)', details: alcoholResult });
-            console.log(`  ✅ Fragrance Base reduced: ${validatedFragranceBaseML}ml`);
+            inventoryChanges.push({ type: 'Fragrance Base Reduced', details: alcoholResult });
+            console.log(`  ✅ Reduced Fragrance Base: ${totalFragrance}ml`);
 
-            const mlSize = selectedPackage.bottleML.toString();
+            // Reduce Bottles × qty
+            const mlSize = pkg.bottleML.toString();
             const bottleResult = await reduceBottlesInventory(
                 mlSize,
-                1,
+                qty,
                 req.user,
-                'Invoice Edit - New Reduction',
-                `Reduced for invoice ${invoiceNumber} (New package: ${selectedPackage.packageName})`
+                'Invoice Edit - Reduction',
+                `Reduced for invoice ${invoiceNumber} (Package: ${pkg.packageName}, ${mlSize}ml × ${qty})`
             );
-            inventoryChanges.push({ type: 'Bottles Reduced (New Package)', details: bottleResult });
-            console.log(`  ✅ Bottles reduced: ${mlSize}ml`);
+            inventoryChanges.push({ type: 'Bottles Reduced', details: bottleResult });
+            console.log(`  ✅ Reduced Bottles: ${mlSize}ml × ${qty}`);
+        }
+
+        // 5c. Handle Dispenser Changes (C4 - return old, reduce new)
+        console.log("\n  💧 Handling Dispenser Changes (C4 — return old, reduce new)...");
+        const oldDispenserItems = originalInvoice.dispenserItems || [];
+
+        // Return ALL old dispensers
+        for (const oldItem of oldDispenserItems) {
+            const totalML = oldItem.totalML || (oldItem.ml * oldItem.quantity);
+            await returnXPOil(
+                oldItem.xpId,
+                totalML,
+                req.user,
+                'Invoice Edit - Return',
+                `Returned for invoice ${invoiceNumber} (Dispenser: ${oldItem.productName})`
+            );
+            await returnBottlesInventory(
+                oldItem.ml.toString(),
+                oldItem.quantity,
+                req.user,
+                'Invoice Edit - Return',
+                `Returned for invoice ${invoiceNumber} (Dispenser bottles: ${oldItem.productName})`
+            );
+            inventoryChanges.push({ type: 'Dispenser Returned (Old)', details: oldItem });
+        }
+        if (oldDispenserItems.length > 0) {
+            console.log(`  ✅ Returned ${oldDispenserItems.length} old dispenser items`);
+        }
+
+        // Reduce ALL new dispensers
+        for (const newItem of newDispenserItems) {
+            const totalML = newItem.totalML || (newItem.ml * newItem.quantity);
+            await reduceXPOil(
+                newItem.xpId,
+                totalML,
+                req.user,
+                'Invoice Edit - Reduction',
+                `Reduced for invoice ${invoiceNumber} (Dispenser: ${newItem.productName})`
+            );
+            await reduceBottlesInventory(
+                newItem.ml.toString(),
+                newItem.quantity,
+                req.user,
+                'Invoice Edit - Reduction',
+                `Reduced for invoice ${invoiceNumber} (Dispenser bottles: ${newItem.productName})`
+            );
+            inventoryChanges.push({ type: 'Dispenser Reduced (New)', details: newItem });
+        }
+        if (newDispenserItems.length > 0) {
+            console.log(`  ✅ Reduced ${newDispenserItems.length} new dispenser items`);
         }
 
         // ============================================
         // 6. CALCULATE NEW TOTALS
         // ============================================
         console.log("\n💰 Step 6: Calculating New Totals...");
-        const subtotal = packageFinalPrice + dispenserSubtotal;
+        const subtotal = packageFinalPriceTotal + dispenserSubtotal;
         const subtotalWithoutGST = subtotal / (1 + GST_RATE / 100);
         console.log("  💰 Subtotal:", subtotal);
         console.log("  💰 Subtotal Without GST:", subtotalWithoutGST);
@@ -2511,8 +2705,8 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 });
             }
 
-            const now = new Date();
-            if (promo.startDate > now || promo.endDate < now) {
+            const nowPromo = new Date();
+            if (promo.startDate > nowPromo || promo.endDate < nowPromo) {
                 console.log("❌ Promo code not active for current date");
                 await logFailed({
                     module: 'Invoice',
@@ -2531,8 +2725,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             promoDiscountAmount = (subtotalWithoutGST * promo.discount) / 100;
             afterPromo = subtotalWithoutGST - promoDiscountAmount;
             console.log(`  ✅ Promo valid: ${promo.code} | ${promo.discount}% discount`);
-            console.log(`  💰 Promo Discount Amount: ₹${promoDiscountAmount}`);
-            console.log(`  💰 After Promo: ₹${afterPromo}`);
 
             promoData = {
                 promoId: promo.promoId,
@@ -2553,7 +2745,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             loyaltyDiscountAmount = Math.min(newLoyaltyUsed, afterPromo);
             afterLoyalty = afterPromo - loyaltyDiscountAmount;
             console.log(`  🪙 Loyalty Coins Used (unchanged): ${newLoyaltyUsed} coins (₹${loyaltyDiscountAmount})`);
-            console.log(`  💰 After Loyalty: ₹${afterLoyalty}`);
         } else {
             console.log("  🪙 No loyalty coins used");
         }
@@ -2562,12 +2753,10 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         console.log(`  🪙 Loyalty Coins EARNED (recalculated): ${newLoyaltyEarned} coins`);
 
         const gstAmount = afterLoyalty * (GST_RATE / 100);
-        console.log("  💰 GST (", GST_RATE, "% ): ₹", gstAmount);
-
         const grandTotal = afterLoyalty + gstAmount;
         console.log("  💰 GRAND TOTAL: ₹", grandTotal);
 
-        const totalDiscountAmount = packageDiscountAmount + totalDispenserDiscount + promoDiscountAmount + loyaltyDiscountAmount;
+        const totalDiscountAmount = packageDiscountTotal + totalDispenserDiscount + promoDiscountAmount + loyaltyDiscountAmount;
         console.log("  💰 Total Discount: ₹", totalDiscountAmount);
 
         // ============================================
@@ -2587,8 +2776,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             let currentCoins = customer.loyaltyCoins || 0;
             const previousBalance = currentCoins;
             loyaltyUpdate.previousBalance = previousBalance;
-
-            console.log(`  🪙 Current Customer Coins: ${currentCoins}`);
 
             if (originalLoyaltyEarned > 0) {
                 currentCoins = Math.max(0, currentCoins - originalLoyaltyEarned);
@@ -2619,7 +2806,6 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             loyaltyUpdate.newBalance = currentCoins;
 
             console.log(`  ✅ Customer loyalty coins updated: ${previousBalance} → ${currentCoins}`);
-            console.log(`  📊 Net Change: ${currentCoins - previousBalance} coins`);
         } else {
             console.log("  ⚠️ Customer not found, skipping loyalty update");
         }
@@ -2632,8 +2818,17 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         const updatedCustomer = await Customer.findOne({ customerId: originalInvoice.customer.customerId });
         const newLoyaltyBalance = updatedCustomer ? updatedCustomer.loyaltyCoins : originalInvoice.customer.loyaltyCoins || 0;
 
+        // Prepare packageItems with lineIds (schema will generate for null ones)
+        const finalPackageItems = newPackageItemsData.map(p => {
+            const obj = { ...p };
+            if (!obj.lineId) {
+                delete obj.lineId;  // Let schema default generate
+            }
+            return obj;
+        });
+
         const updateData = {
-            packageItem: newPackageData,
+            packageItems: finalPackageItems,
             hasPackage: hasPackage,
             dispenserItems: newDispenserItems,
             hasDispenser: hasDispenser,
@@ -2646,7 +2841,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             subtotalWithoutGST: subtotalWithoutGST,
             gstRate: GST_RATE,
             gstAmount: gstAmount,
-            packageDiscountAmount: packageDiscountAmount,
+            packageDiscountAmount: packageDiscountTotal,
             dispenserDiscountAmount: totalDispenserDiscount,
             promoDiscount: promoDiscountAmount,
             totalDiscountAmount: totalDiscountAmount,
@@ -2667,17 +2862,14 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
         );
 
         console.log("✅ Invoice updated successfully!");
-        console.log("  📄 New Invoice Number:", updatedInvoice.invoiceNumber);
+        console.log("  📄 Invoice Number:", updatedInvoice.invoiceNumber);
         console.log("  💰 New Total: ₹", updatedInvoice.grandTotal);
-        console.log("  🪙 Loyalty Earned:", updatedInvoice.loyaltyCoinsEarned);
-        console.log("  🪙 Loyalty Used:", updatedInvoice.loyaltyCoinsUsed);
 
         // ============================================
         // 9. LOG SUCCESS
         // ============================================
         console.log("\n✅ INVOICE UPDATE COMPLETED SUCCESSFULLY");
         console.log(`📄 Invoice: ${invoiceNumber} | New Total: ₹${grandTotal.toFixed(2)}`);
-        console.log(`🪙 Loyalty: ${newLoyaltyEarned} earned | ${newLoyaltyUsed} used | Balance: ${newLoyaltyBalance}`);
         console.log("==========================================\n");
 
         await logSuccess({
@@ -2696,6 +2888,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             inventoryChanges: inventoryChanges,
             loyaltyUpdate: loyaltyUpdate,
             calculations: {
+                packageFinalTotal: packageFinalPriceTotal,
+                packageDiscountTotal: packageDiscountTotal,
+                dispenserSubtotal: dispenserSubtotal,
                 subtotal: subtotal,
                 subtotalWithoutGST: subtotalWithoutGST,
                 promoDiscount: promoDiscountAmount,
@@ -2986,31 +3181,54 @@ router.get("/export", auth, async (req, res) => {
             });
         };
 
+        // ✅ Helper: normalize packages array for any invoice (A1 backward compat)
+        const getPackagesArray = (inv) => {
+            if (inv.packageItems && inv.packageItems.length > 0) {
+                return inv.packageItems.map(p => {
+                    const obj = { ...p };
+                    if (!obj.quantity) obj.quantity = 1;
+                    return obj;
+                });
+            }
+            if (inv.packageItem && inv.packageItem.packageId) {
+                const single = { ...inv.packageItem };
+                if (!single.quantity) single.quantity = 1;
+                return [single];
+            }
+            return [];
+        };
+
         // ============================================
         // SHEET 1: INVOICE SUMMARY
         // ============================================
         console.log("\n📊 Creating Sheet 1: Invoice Summary...");
 
-        const summaryData = invoices.map(inv => ({
-            'Invoice #': inv.invoiceNumber || 'N/A',
-            'Date': formatDate(inv.invoiceDate),
-            'Customer Name': inv.customer?.customerName || 'N/A',
-            'Phone': inv.customer?.contactNumber || 'N/A',
-            'Payment': inv.paymentStatus || 'N/A',
-            'Package': inv.hasPackage ? inv.packageItem?.packageName || 'Yes' : 'No',
-            'Dispenser Items': inv.hasDispenser ? inv.dispenserItems?.length || 0 : 0,
-            'Total Items': (inv.hasPackage ? 1 : 0) + (inv.dispenserItems?.length || 0),
-            'Subtotal': `₹${(inv.subtotal || 0).toFixed(2)}`,
-            'Total Discount': `₹${(inv.totalDiscountAmount || 0).toFixed(2)}`,
-            'GST': `₹${(inv.gstAmount || 0).toFixed(2)}`,
-            'Grand Total': `₹${(inv.grandTotal || 0).toFixed(2)}`,
-            'Loyalty Earned': inv.loyaltyCoinsEarned || 0,
-            'Loyalty Used': inv.loyaltyCoinsUsed || 0,
-            'Status': inv.status || 'Active'
-        }));
+        const summaryData = invoices.map(inv => {
+            const pkgs = getPackagesArray(inv);
+            const pkgNames = pkgs.map(p => p.packageName).join(', ');
+
+            return {
+                'Invoice #': inv.invoiceNumber || 'N/A',
+                'Date': formatDate(inv.invoiceDate),
+                'Customer Name': inv.customer?.customerName || 'N/A',
+                'Phone': inv.customer?.contactNumber || 'N/A',
+                'Payment': inv.paymentStatus || 'N/A',
+                'Packages Count': pkgs.length,
+                'Package Names': pkgs.length > 0 ? pkgNames : 'No',
+                'Dispenser Items': inv.hasDispenser ? inv.dispenserItems?.length || 0 : 0,
+                'Total Items': pkgs.length + (inv.dispenserItems?.length || 0),
+                'Subtotal': `₹${(inv.subtotal || 0).toFixed(2)}`,
+                'Total Discount': `₹${(inv.totalDiscountAmount || 0).toFixed(2)}`,
+                'GST': `₹${(inv.gstAmount || 0).toFixed(2)}`,
+                'Grand Total': `₹${(inv.grandTotal || 0).toFixed(2)}`,
+                'Loyalty Earned': inv.loyaltyCoinsEarned || 0,
+                'Loyalty Used': inv.loyaltyCoinsUsed || 0,
+                'Status': inv.status || 'Active'
+            };
+        });
 
         // ============================================
-        // SHEET 2: INVOICE DETAILS - WITH MULTIPLE XP OILS
+        // SHEET 2: INVOICE DETAILS - WITH MULTIPLE PACKAGES
         // ============================================
         console.log("\n📊 Creating Sheet 2: Invoice Details...");
 
@@ -3049,16 +3267,46 @@ router.get("/export", auth, async (req, res) => {
                 }
             };
 
-            // 1. Add Package Item (if exists)
-            if (inv.hasPackage && inv.packageItem) {
+            // 1. Add Package Items (loop through all packages)
+            const pkgs = getPackagesArray(inv);
+            if (pkgs.length > 0) {
                 addHeaderRow();
-                const pkg = inv.packageItem;
 
-                // Show XP Oil details - multiple rows if multiple oils
-                const xpOilItems = pkg.xpOilItems || [];
+                for (let pkgIdx = 0; pkgIdx < pkgs.length; pkgIdx++) {
+                    const pkg = pkgs[pkgIdx];
+                    const qty = pkg.quantity || 1;
+                    const xpOilItems = pkg.xpOilItems || [];
 
-                if (xpOilItems.length > 0) {
-                    for (const xp of xpOilItems) {
+                    if (xpOilItems.length > 0) {
+                        // One row per XP oil per package
+                        for (const xp of xpOilItems) {
+                            detailsData.push({
+                                'Invoice #': '',
+                                'Date': '',
+                                'Customer': '',
+                                'Payment': '',
+                                'Grand Total': '',
+                                'Subtotal': '',
+                                'Total Discount': '',
+                                'GST': '',
+                                'Item Type': `📦 Package ${pkgIdx + 1} - XP Oil`,
+                                'Product Name': xp.productName || 'N/A',
+                                'ML': xp.ml || 'N/A',
+                                'Quantity': qty,
+                                'Unit Price': `₹${(xp.pricePerKG || 0).toFixed(2)}/KG`,
+                                'Discount %': `${pkg.discount || 0}%`,
+                                'Discount Amount': `₹${((pkg.discountAmount || 0) * qty).toFixed(2)}`,
+                                'Final Price': `₹${((pkg.finalPrice || pkg.pricing || 0) * qty).toFixed(2)}`,
+                                'XP Oil Name': xp.productName || 'N/A',
+                                'XP Oil ML': `${(xp.ml || 0) * qty}ml`,
+                                'Fragrance Base Used': `${(pkg.alcoholQty || 0) * qty}ml`,
+                                'Promo Code': '',
+                                'Loyalty Earned': '',
+                                'Loyalty Used': ''
+                            });
+                        }
+                    } else {
+                        // Fallback for old invoices with single XP Oil
                         detailsData.push({
                             'Invoice #': '',
                             'Date': '',
@@ -3068,54 +3316,28 @@ router.get("/export", auth, async (req, res) => {
                             'Subtotal': '',
                             'Total Discount': '',
                             'GST': '',
-                            'Item Type': '📦 XP Oil',
-                            'Product Name': xp.productName || 'N/A',
-                            'ML': xp.ml || 'N/A',
-                            'Quantity': 1,
-                            'Unit Price': `₹${(xp.pricePerKG || 0).toFixed(2)}/KG`,
+                            'Item Type': `📦 Package ${pkgIdx + 1}`,
+                            'Product Name': pkg.packageName || 'N/A',
+                            'ML': pkg.bottleML || 'N/A',
+                            'Quantity': qty,
+                            'Unit Price': `₹${(pkg.pricing || 0).toFixed(2)}`,
                             'Discount %': `${pkg.discount || 0}%`,
-                            'Discount Amount': `₹${(pkg.discountAmount || 0).toFixed(2)}`,
-                            'Final Price': `₹${(pkg.finalPrice || pkg.pricing || 0).toFixed(2)}`,
-                            'XP Oil Name': xp.productName || 'N/A',
-                            'XP Oil ML': `${xp.ml || 0}ml`,
-                            'Fragrance Base Used': `${pkg.alcoholQty || 0}ml`,
+                            'Discount Amount': `₹${((pkg.discountAmount || 0) * qty).toFixed(2)}`,
+                            'Final Price': `₹${((pkg.finalPrice || pkg.pricing || 0) * qty).toFixed(2)}`,
+                            'XP Oil Name': pkg.xpOil?.productName || 'N/A',
+                            'XP Oil ML': `${((pkg.xpOil?.quantity || 0) * 1000) * qty}ml`,
+                            'Fragrance Base Used': `${(pkg.alcoholQty || 0) * qty}ml`,
                             'Promo Code': '',
                             'Loyalty Earned': '',
                             'Loyalty Used': ''
                         });
                     }
-                } else {
-                    // Fallback for old invoices with single XP Oil
-                    detailsData.push({
-                        'Invoice #': '',
-                        'Date': '',
-                        'Customer': '',
-                        'Payment': '',
-                        'Grand Total': '',
-                        'Subtotal': '',
-                        'Total Discount': '',
-                        'GST': '',
-                        'Item Type': '📦 Package',
-                        'Product Name': pkg.packageName || 'N/A',
-                        'ML': pkg.bottleML || 'N/A',
-                        'Quantity': 1,
-                        'Unit Price': `₹${(pkg.pricing || 0).toFixed(2)}`,
-                        'Discount %': `${pkg.discount || 0}%`,
-                        'Discount Amount': `₹${(pkg.discountAmount || 0).toFixed(2)}`,
-                        'Final Price': `₹${(pkg.finalPrice || pkg.pricing || 0).toFixed(2)}`,
-                        'XP Oil Name': pkg.xpOil?.productName || 'N/A',
-                        'XP Oil ML': `${(pkg.xpOil?.quantity || 0) * 1000}ml`,
-                        'Fragrance Base Used': `${pkg.alcoholQty || 0}ml`,
-                        'Promo Code': '',
-                        'Loyalty Earned': '',
-                        'Loyalty Used': ''
-                    });
                 }
             }
 
             // 2. Add Dispenser Items
             if (inv.hasDispenser && inv.dispenserItems.length > 0) {
-                if (!inv.hasPackage) {
+                if (pkgs.length === 0) {
                     addHeaderRow();
                 }
 
@@ -3149,7 +3371,7 @@ router.get("/export", auth, async (req, res) => {
             }
 
             // 3. If NO items
-            if (!inv.hasPackage && (!inv.hasDispenser || inv.dispenserItems.length === 0)) {
+            if (pkgs.length === 0 && (!inv.hasDispenser || inv.dispenserItems.length === 0)) {
                 addHeaderRow();
                 detailsData.push({
                     'Invoice #': '',
@@ -3191,9 +3413,9 @@ router.get("/export", auth, async (req, res) => {
         const ws1 = XLSX.utils.json_to_sheet(summaryData);
         ws1['!cols'] = [
             { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 15 },
-            { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
-            { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 18 },
-            { wch: 15 }, { wch: 15 }, { wch: 12 }
+            { wch: 12 }, { wch: 15 }, { wch: 30 }, { wch: 12 },
+            { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 12 },
+            { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 12 }
         ];
         XLSX.utils.book_append_sheet(wb, ws1, 'Invoice Summary');
 
@@ -3208,7 +3430,7 @@ router.get("/export", auth, async (req, res) => {
             { wch: 15 },  // Subtotal
             { wch: 18 },  // Total Discount
             { wch: 12 },  // GST
-            { wch: 18 },  // Item Type
+            { wch: 25 },  // Item Type
             { wch: 30 },  // Product Name
             { wch: 8 },   // ML
             { wch: 10 },  // Quantity
@@ -3294,7 +3516,7 @@ router.get("/:invoiceId", auth, async (req, res) => {
 });
 
 // ============================================
-// DELETE INVOICE - With Inventory Return & Audit - UPDATED TO USE XP ID
+// DELETE INVOICE - With Inventory Return & Audit
 // ============================================
 router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, res) => {
     console.log("\n========== 🗑️ INVOICE DELETION STARTED ==========");
@@ -3333,8 +3555,7 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
         console.log("✅ Invoice found:", invoice.invoiceNumber);
         console.log("  👤 Customer:", invoice.customer.customerName);
         console.log("  💰 Total Amount: ₹", invoice.grandTotal);
-        console.log("  📦 Package:", invoice.hasPackage ? invoice.packageItem?.packageName : "None");
-        console.log("  🧪 XP Oils:", invoice.packageItem?.xpOilItems?.length || 0);
+        console.log("  📦 Package Items:", invoice.packageItems?.length || 0);
         console.log("  💧 Dispensers:", invoice.dispenserItems?.length || 0);
         console.log("  🏷️ Promo:", invoice.hasPromo ? invoice.promoApplied?.code : "None");
         console.log("  🪙 Loyalty Earned:", invoice.loyaltyCoinsEarned || 0);
@@ -3342,6 +3563,19 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
 
         const invoiceNumber = invoice.invoiceNumber;
         const invoiceData = invoice.toObject();
+
+        // ============================================
+        // ✅ Normalize OLD invoice to array (A1 backward compat)
+        // ============================================
+        let packageItemsToReturn = [];
+        if (invoice.packageItems && invoice.packageItems.length > 0) {
+            packageItemsToReturn = invoice.packageItems.map(p => p.toObject ? p.toObject() : p);
+        } else if (invoice.packageItem && invoice.packageItem.packageId) {
+            const single = invoice.packageItem.toObject ? invoice.packageItem.toObject() : invoice.packageItem;
+            if (!single.quantity) single.quantity = 1;
+            packageItemsToReturn = [single];
+        }
+        console.log("  📦 Packages to return (normalized):", packageItemsToReturn.length);
 
         // ============================================
         // 2. RETURN ALL INVENTORY
@@ -3355,80 +3589,93 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
             xpOilDetails: []
         };
 
-        // 2a. Return Package Stock
-        if (invoice.hasPackage && invoice.packageItem) {
+        // 2a. Return Packages (loop through each package × qty)
+        if (packageItemsToReturn.length > 0) {
             console.log("\n  📦 Returning Package Stock...");
-            const pkg = invoice.packageItem;
-            console.log("    Package:", pkg.packageName);
 
-            // ✅ Return Multiple XP Oils
-            const xpOilItems = pkg.xpOilItems || [];
+            for (let i = 0; i < packageItemsToReturn.length; i++) {
+                const pkg = packageItemsToReturn[i];
+                const qty = pkg.quantity || 1;
 
-            if (xpOilItems.length > 0) {
-                console.log(`    🧪 Returning ${xpOilItems.length} XP Oils...`);
-                const returnResult = await returnMultipleXPOils(
-                    xpOilItems.map(item => ({ xpId: item.xpId, ml: item.ml })),
-                    req.user,
-                    invoiceNumber
-                );
+                console.log(`\n    📦 Package ${i + 1}/${packageItemsToReturn.length}: ${pkg.packageName} (qty ${qty})`);
 
-                inventoryReturned.xpOilDetails = returnResult.results;
-                inventoryReturned.xpOil = returnResult.totalML;
+                // ✅ Return XP Oils × qty
+                const xpOilItems = pkg.xpOilItems || [];
 
-                for (const result of returnResult.results) {
-                    console.log(`    ✅ ${result.productName}: ${result.ml}ml returned`);
+                if (xpOilItems.length > 0) {
+                    console.log(`      🧪 Returning ${xpOilItems.length} XP Oils × ${qty}...`);
+
+                    const xpItemsForReturn = xpOilItems.map(item => ({
+                        xpId: item.xpId,
+                        ml: item.ml * qty
+                    }));
+
+                    const returnResult = await returnMultipleXPOils(
+                        xpItemsForReturn,
+                        req.user,
+                        invoiceNumber
+                    );
+
+                    inventoryReturned.xpOilDetails.push(...returnResult.results);
+                    inventoryReturned.xpOil += returnResult.totalML;
+
+                    for (const result of returnResult.results) {
+                        console.log(`      ✅ ${result.productName}: ${result.ml}ml returned`);
+                    }
+                } else {
+                    // Fallback for old invoices with single XP Oil
+                    if (pkg.xpOil && pkg.xpOil.xpId) {
+                        const singleML = (pkg.fragranceQty || (pkg.xpOil.quantity * 1000)) * qty;
+                        const xpResult = await returnXPOil(
+                            pkg.xpOil.xpId,
+                            singleML,
+                            req.user,
+                            'Invoice Deletion - Return',
+                            `Returned for invoice ${invoiceNumber} (Invoice deleted)`
+                        );
+                        inventoryReturned.xpOil += singleML;
+                        inventoryReturned.xpOilDetails.push(xpResult);
+                        console.log(`      ✅ XP Oil returned: ${singleML}g (${xpResult.productName})`);
+                    }
                 }
-            } else {
-                // Fallback for old invoices with single XP Oil
-                if (pkg.xpOil && pkg.xpOil.xpId) {
-                    const xpResult = await returnXPOil(
-                        pkg.xpOil.xpId,
-                        pkg.fragranceQty || (pkg.xpOil.quantity * 1000),
+
+                // ✅ Return Fragrance Base × qty
+                const totalFragranceToReturn = (pkg.alcoholQty || 0) * qty;
+                if (totalFragranceToReturn > 0) {
+                    await returnAlcohol(
+                        totalFragranceToReturn,
                         req.user,
                         'Invoice Deletion - Return',
-                        `Returned for invoice ${invoiceNumber} (Invoice deleted)`
+                        `Returned for invoice ${invoiceNumber} (Package ${i + 1}: ${pkg.packageName}, Fragrance Base: ${totalFragranceToReturn}ml)`
                     );
-                    inventoryReturned.xpOil = pkg.fragranceQty || (pkg.xpOil.quantity * 1000);
-                    inventoryReturned.xpOilDetails.push(xpResult);
-                    console.log(`    ✅ XP Oil returned: ${inventoryReturned.xpOil}g (${xpResult.productName})`);
+                    inventoryReturned.alcohol += totalFragranceToReturn;
+                    console.log(`      ✅ Fragrance Base returned: ${totalFragranceToReturn}ml`);
                 }
+
+                // ✅ Return Bottles × qty
+                await returnBottlesInventory(
+                    pkg.bottleML.toString(),
+                    qty,
+                    req.user,
+                    'Invoice Deletion - Return',
+                    `Returned for invoice ${invoiceNumber} (Package ${i + 1}: ${pkg.packageName}, ${pkg.bottleML}ml × ${qty})`
+                );
+                inventoryReturned.bottles += qty;
+                console.log(`      ✅ Bottles returned: ${pkg.bottleML}ml × ${qty}`);
             }
-
-            // Return Alcohol
-            const alcoholResult = await returnAlcohol(
-                pkg.alcoholQty,
-                req.user,
-                'Invoice Deletion - Return',
-                `Returned for invoice ${invoiceNumber} (Invoice deleted)`
-            );
-            inventoryReturned.alcohol += pkg.alcoholQty;
-            console.log(`    ✅ Fragrance Base returned: ${pkg.alcoholQty}ml`);
-
-            // Return Bottles
-            const bottleResult = await returnBottlesInventory(
-                pkg.bottleML.toString(),
-                1,
-                req.user,
-                'Invoice Deletion - Return',
-                `Returned for invoice ${invoiceNumber} (Invoice deleted)`
-            );
-            inventoryReturned.bottles += 1;
-            console.log(`    ✅ Bottles returned: ${pkg.bottleML}ml (1 set)`);
         } else {
             console.log("  ℹ️ No package stock to return");
         }
 
-        // 2b. Return Dispenser Stock - UPDATED TO USE XP ID
+        // 2b. Return Dispenser Stock
         if (invoice.hasDispenser && invoice.dispenserItems.length > 0) {
-            console.log("\n  💧 Returning Dispenser Stock (using XP ID)...");
+            console.log("\n  💧 Returning Dispenser Stock...");
             for (const item of invoice.dispenserItems) {
                 console.log(`    Item: ${item.productName}`);
                 console.log(`      ML: ${item.ml}ml | Qty: ${item.quantity} | Total ML: ${item.totalML}ml`);
 
-                // ✅ CHANGED: Use returnXPOil instead of returnDispenserOil
-                // ✅ CHANGED: Use xpId instead of dispenserId
                 const xpResult = await returnXPOil(
-                    item.xpId,  // ✅ CHANGED: Use xpId
+                    item.xpId,
                     item.totalML || (item.ml * item.quantity),
                     req.user,
                     'Invoice Deletion - Return',
@@ -3532,12 +3779,9 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
         });
 
         await deletedInvoice.save();
-        console.log("✅ Deleted Invoice saved for audit:");
-        console.log(`  📄 Original Invoice ID: ${deletedInvoice.originalInvoiceId}`);
+        console.log("✅ Deleted Invoice saved for audit");
         console.log(`  📄 Invoice Number: ${deletedInvoice.invoiceNumber}`);
-        console.log(`  👤 Deleted By: ${req.user.name} (${req.user.email})`);
-        console.log(`  📅 Deleted At: ${new Date().toISOString()}`);
-        console.log(`  🪙 Loyalty - Earned: ${loyaltyCoinsEarned}, Used: ${loyaltyCoinsUsed}`);
+        console.log(`  👤 Deleted By: ${req.user.name}`);
 
         // ============================================
         // 5. DELETE FROM MAIN COLLECTION
@@ -3547,7 +3791,7 @@ router.delete("/delete/:invoiceId", auth, checkInvoicePermission, async (req, re
         console.log(`✅ Invoice ${invoiceNumber} removed from main collection`);
 
         // ============================================
-        // 6. UPDATE WORKSHOP - Remove invoice marking
+        // 6. UPDATE WORKSHOP
         // ============================================
         console.log("\n🔍 Step 6: Updating Workshop...");
         if (invoice.hasWorkshop && invoice.workshop) {

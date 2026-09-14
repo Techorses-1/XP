@@ -40,6 +40,11 @@ const xpOilItemSchema = new mongoose.Schema({
 // INVOICE ITEM SUB-SCHEMA (Package Item)
 // ============================================
 const packageItemSchema = new mongoose.Schema({
+    // ✅ NEW: Backend-generated unique line ID for this package entry (used for update diffing)
+    lineId: {
+        type: String,
+        default: () => uuidv4()
+    },
     packageId: {
         type: String,
         required: true,
@@ -58,6 +63,12 @@ const packageItemSchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: 0
+    },
+    // ✅ NEW: Quantity of this package
+    quantity: {
+        type: Number,
+        default: 1,
+        min: 1
     },
     discount: {
         type: Number,
@@ -299,9 +310,15 @@ const invoiceSchema = new mongoose.Schema({
         default: false
     },
 
+    // ✅ KEPT for backward compatibility (old invoices)
     packageItem: {
         type: packageItemSchema,
         default: null
+    },
+    // ✅ NEW: Array of packages (for new invoices)
+    packageItems: {
+        type: [packageItemSchema],
+        default: []
     },
     hasPackage: {
         type: Boolean,
@@ -539,38 +556,75 @@ invoiceSchema.statics.getByPaymentType = async function (paymentType, startDate,
 };
 
 // ============================================
-// ✅ UPDATED PRE-SAVE MIDDLEWARE - FIXED
+// ✅ UPDATED PRE-SAVE MIDDLEWARE
+// ✅ HANDLES BOTH: packageItems[] (new) AND packageItem (old)
 // ============================================
 invoiceSchema.pre('save', function () {
-    // Calculate Package Discount Amount
-    if (this.hasPackage && this.packageItem) {
+    // ============================================
+    // Determine which packages array to use
+    // Priority: packageItems[] (new) > packageItem (old)
+    // ============================================
+    const hasNewPackages = this.packageItems && this.packageItems.length > 0;
+    const hasOldPackage = this.packageItem && this.packageItem.packageId;
+
+    // ============================================
+    // Calculate Package Discount Amounts
+    // ============================================
+    let totalPackageDiscount = 0;
+    let totalPackageFinal = 0;
+
+    if (hasNewPackages) {
+        // NEW: Loop through packageItems array
+        for (const pkg of this.packageItems) {
+            const qty = pkg.quantity || 1;
+            pkg.discountAmount = (pkg.pricing * pkg.discount) / 100;
+            pkg.finalPrice = pkg.pricing - pkg.discountAmount;
+
+            totalPackageDiscount += pkg.discountAmount * qty;
+            totalPackageFinal += pkg.finalPrice * qty;
+        }
+        this.packageDiscountAmount = totalPackageDiscount;
+
+        // ✅ B2: Set packageItem = first package for backward compat
+        this.packageItem = this.packageItems[0];
+        this.hasPackage = true;
+    } else if (hasOldPackage) {
+        // OLD: Single package (backward compat)
         const pkg = this.packageItem;
+        const qty = pkg.quantity || 1;
         pkg.discountAmount = (pkg.pricing * pkg.discount) / 100;
         pkg.finalPrice = pkg.pricing - pkg.discountAmount;
-        this.packageDiscountAmount = pkg.discountAmount;
+
+        totalPackageDiscount = pkg.discountAmount * qty;
+        totalPackageFinal = pkg.finalPrice * qty;
+        this.packageDiscountAmount = totalPackageDiscount;
+
+        // ✅ Ensure packageItems is set so all readers can use array
+        this.packageItems = [this.packageItem];
+        this.hasPackage = true;
+    } else {
+        this.packageDiscountAmount = 0;
+        this.hasPackage = false;
     }
 
-    // ✅ FIXED: Calculate Dispenser using unitPrice (if available)
+    // ============================================
+    // Calculate Dispenser (unchanged)
+    // ============================================
     let totalDispenserDiscount = 0;
     let dispenserTotal = 0;
 
     if (this.hasDispenser && this.dispenserItems.length > 0) {
         for (const item of this.dispenserItems) {
-            // ✅ FIRST: Use unitPrice (user entered) if available
-            // ✅ SECOND: Fallback to DB price if unitPrice is 0 or not set
             let unitPrice = item.unitPrice;
 
-            // If unitPrice is 0 or not set, use DB price
             if (!unitPrice || unitPrice === 0) {
                 unitPrice = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
             }
 
-            // Calculate totals using unitPrice
             const originalTotal = unitPrice * item.quantity;
             const discountAmt = (originalTotal * (item.discount || 0)) / 100;
             const finalTotal = originalTotal - discountAmt;
 
-            // Store calculated values
             item.originalPrice = originalTotal;
             item.discountAmount = discountAmt;
             item.finalPrice = finalTotal;
@@ -581,11 +635,11 @@ invoiceSchema.pre('save', function () {
         this.dispenserDiscountAmount = totalDispenserDiscount;
     }
 
+    // ============================================
     // Calculate Subtotal
+    // ============================================
     let subtotal = 0;
-    if (this.hasPackage && this.packageItem) {
-        subtotal += this.packageItem.finalPrice || this.packageItem.pricing;
-    }
+    subtotal += totalPackageFinal;
     if (this.hasDispenser && this.dispenserItems.length > 0) {
         subtotal += dispenserTotal;
     }
@@ -594,7 +648,9 @@ invoiceSchema.pre('save', function () {
     // Calculate Subtotal WITHOUT GST
     this.subtotalWithoutGST = this.subtotal / (1 + this.gstRate / 100);
 
+    // ============================================
     // Apply Promo Discount
+    // ============================================
     let promoDiscountAmount = 0;
     let afterPromo = this.subtotalWithoutGST;
 
@@ -605,7 +661,9 @@ invoiceSchema.pre('save', function () {
         afterPromo = this.subtotalWithoutGST - promoDiscountAmount;
     }
 
+    // ============================================
     // Apply Loyalty Coins Discount
+    // ============================================
     let loyaltyDiscountAmount = 0;
     if (this.loyaltyCoinsUsed > 0) {
         loyaltyDiscountAmount = Math.min(this.loyaltyCoinsUsed, afterPromo);
@@ -613,7 +671,9 @@ invoiceSchema.pre('save', function () {
         afterPromo = afterPromo - loyaltyDiscountAmount;
     }
 
+    // ============================================
     // Calculate Total Discount
+    // ============================================
     this.totalDiscountAmount = (this.packageDiscountAmount || 0) +
         (this.dispenserDiscountAmount || 0) +
         (this.promoDiscount || 0) +

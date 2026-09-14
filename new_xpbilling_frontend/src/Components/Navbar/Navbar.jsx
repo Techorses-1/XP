@@ -26,7 +26,7 @@ import { RxCross1 } from "react-icons/rx";
 import { MdDiscount } from "react-icons/md";
 import { FaSearch, FaFileExcel, FaPlus, FaBox, FaFlask, FaSyringe, FaVial, FaWarehouse } from "react-icons/fa";
 
-import logo from "../../assets/logo/jass_logo_new.png";
+import logo from "../../assets/logo/xp_logo.png";
 import "./Navbar.scss";
 
 const Navbar = ({
