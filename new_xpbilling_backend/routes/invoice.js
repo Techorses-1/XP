@@ -62,7 +62,9 @@ const checkInvoicePermission = (req, res, next) => {
 const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
     const itemTypes = (mlSize === '3' || mlSize === '6')
         ? ['Bottle', 'Cap', 'Roll on', 'Box']
-        : ['Bottle', 'Cap', 'Pump', 'Box'];
+        : (mlSize === '30' || mlSize === '60')
+            ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+            : ['Bottle', 'Cap', 'Pump', 'Box'];
     const results = [];
 
     for (const itemType of itemTypes) {
@@ -127,7 +129,9 @@ const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason,
 const returnBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
     const itemTypes = (mlSize === '3' || mlSize === '6')
         ? ['Bottle', 'Cap', 'Roll on', 'Box']
-        : ['Bottle', 'Cap', 'Pump', 'Box'];
+        : (mlSize === '30' || mlSize === '60')
+            ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+            : ['Bottle', 'Cap', 'Pump', 'Box'];
     const results = [];
 
     for (const itemType of itemTypes) {
@@ -1222,7 +1226,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
             for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
                 const bottleItems = (mlSize === '3' || mlSize === '6')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+                    : (mlSize === '30' || mlSize === '60')
+                        ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+                        : ['Bottle', 'Cap', 'Pump', 'Box'];
 
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
@@ -1356,7 +1362,9 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 const mlSize = ml.toString();
                 const bottleItems = (mlSize === '3' || mlSize === '6')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+                    : (mlSize === '30' || mlSize === '60')
+                        ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+                        : ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                     if (!bottleStock || bottleStock.quantity < quantity) {
@@ -2098,7 +2106,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
                 const bottleItems = (mlSize === '3' || mlSize === '6')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+                    : (mlSize === '30' || mlSize === '60')
+                        ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+                        : ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                     if (!bottleStock || bottleStock.quantity < totalQty) {
@@ -2421,7 +2431,9 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 const mlSize = ml.toString();
                 const bottleItems = (mlSize === '3' || mlSize === '6')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
-                    : ['Bottle', 'Cap', 'Pump', 'Box'];
+                    : (mlSize === '30' || mlSize === '60')
+                        ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
+                        : ['Bottle', 'Cap', 'Pump', 'Box'];
                 for (const itemType of bottleItems) {
                     const bottleStock = await BottlesInventory.findOne({ mlSize, itemType });
                     if (!bottleStock || bottleStock.quantity < quantity) {
