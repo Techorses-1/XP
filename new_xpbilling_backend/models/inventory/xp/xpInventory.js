@@ -45,6 +45,12 @@ const xpInventorySchema = new mongoose.Schema({
         default: 0,
         min: [0, 'Selling price cannot be negative']
     },
+
+    sellingPrice12ml: {
+        type: Number,
+        default: 0,
+        min: [0, 'Selling price cannot be negative']
+    },
     // ========================================
     minStock: {
         type: Number,

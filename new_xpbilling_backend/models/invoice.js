@@ -151,7 +151,7 @@ const dispenserItemSchema = new mongoose.Schema({
     ml: {
         type: Number,
         required: true,
-        enum: [3, 6]
+        enum: [3, 6, 12]
     },
     quantity: {
         type: Number,
@@ -170,6 +170,11 @@ const dispenserItemSchema = new mongoose.Schema({
         min: 0
     },
     sellingPrice6ml: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    sellingPrice12ml: {
         type: Number,
         default: 0,
         min: 0
@@ -618,7 +623,13 @@ invoiceSchema.pre('save', function () {
             let unitPrice = item.unitPrice;
 
             if (!unitPrice || unitPrice === 0) {
-                unitPrice = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                if (item.ml === 3) {
+                    unitPrice = item.sellingPrice3ml;
+                } else if (item.ml === 12) {
+                    unitPrice = item.sellingPrice12ml;
+                } else {
+                    unitPrice = item.sellingPrice6ml;
+                }
             }
 
             const originalTotal = unitPrice * item.quantity;

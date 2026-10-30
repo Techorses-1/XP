@@ -21,6 +21,7 @@ import Select from 'react-select';
 // ============================================
 // ADD PRODUCT MODAL - UPDATED WITH SELLING PRICES
 // ============================================
+
 const AddProductModal = ({
   show, onClose, newProduct, setNewProduct,
   isSubmitting, onSubmit
@@ -79,6 +80,21 @@ const AddProductModal = ({
               <small className="xp-field-hint">Price for 6ml dispenser (optional)</small>
             </div>
           </div>
+          <div className="xp-form-row">
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (12ml) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newProduct.sellingPrice12ml || ''}
+                onChange={(e) => setNewProduct({ ...newProduct, sellingPrice12ml: e.target.value })}
+                placeholder="Enter selling price for 12ml"
+                autoComplete="off"
+              />
+              <small className="xp-field-hint">Price for 12ml dispenser (optional)</small>
+            </div>
+          </div>
         </div>
         <div className="xp-modal-footer">
           <button className="xp-btn-cancel" onClick={onClose}>
@@ -90,6 +106,95 @@ const AddProductModal = ({
             disabled={isSubmitting || !newProduct.productName.trim()}
           >
             {isSubmitting ? "Adding..." : "Add Product"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// EDIT PRODUCT MODAL - UPDATED WITH SELLING PRICES
+// ============================================
+const EditProductModal = ({
+  show, onClose, editData, setEditData,
+  isSubmitting, onSubmit
+}) => {
+  if (!show) return null;
+
+  return (
+    <div className="xp-modal-overlay" onClick={onClose}>
+      <div className="xp-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="xp-modal-header">
+          <div className="xp-modal-title">
+            <FaEdit /> Edit Product
+          </div>
+          <button className="xp-modal-close" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        <div className="xp-modal-body">
+          <div className="xp-form-row">
+            <div className="xp-form-field">
+              <label>Product Name *</label>
+              <input
+                type="text"
+                value={editData.productName}
+                onChange={(e) => setEditData({ ...editData, productName: e.target.value })}
+                placeholder="Enter product name"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="xp-form-row">
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (3ml)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.sellingPrice3ml || ''}
+                onChange={(e) => setEditData({ ...editData, sellingPrice3ml: e.target.value })}
+                placeholder="Enter selling price for 3ml"
+                autoComplete="off"
+              />
+            </div>
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (6ml)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.sellingPrice6ml || ''}
+                onChange={(e) => setEditData({ ...editData, sellingPrice6ml: e.target.value })}
+                placeholder="Enter selling price for 6ml"
+                autoComplete="off"
+              />
+            </div>
+            <div className="xp-form-field">
+              <label><FaPriceTag /> Selling Price (12ml)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.sellingPrice12ml || ''}
+                onChange={(e) => setEditData({ ...editData, sellingPrice12ml: e.target.value })}
+                placeholder="Enter selling price for 12ml"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="xp-modal-footer">
+          <button className="xp-btn-cancel" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="xp-btn-primary"
+            onClick={onSubmit}
+            disabled={isSubmitting || !editData.productName.trim()}
+          >
+            {isSubmitting ? "Updating..." : "Update Product"}
           </button>
         </div>
       </div>
@@ -283,6 +388,9 @@ const AddStockModal = ({
               {selectedProduct.sellingPrice6ml > 0 && (
                 <span>Sell Price 6ml: <strong>₹{selectedProduct.sellingPrice6ml}</strong></span>
               )}
+              {selectedProduct.sellingPrice12ml > 0 && (
+                <span>Sell Price 12ml: <strong>₹{selectedProduct.sellingPrice12ml}</strong></span>
+              )}
             </div>
           )}
 
@@ -346,82 +454,6 @@ const AddStockModal = ({
   );
 };
 
-// ============================================
-// EDIT PRODUCT MODAL - UPDATED WITH SELLING PRICES
-// ============================================
-const EditProductModal = ({
-  show, onClose, editData, setEditData,
-  isSubmitting, onSubmit
-}) => {
-  if (!show) return null;
-
-  return (
-    <div className="xp-modal-overlay" onClick={onClose}>
-      <div className="xp-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="xp-modal-header">
-          <div className="xp-modal-title">
-            <FaEdit /> Edit Product
-          </div>
-          <button className="xp-modal-close" onClick={onClose}>
-            <FaTimes />
-          </button>
-        </div>
-        <div className="xp-modal-body">
-          <div className="xp-form-row">
-            <div className="xp-form-field">
-              <label>Product Name *</label>
-              <input
-                type="text"
-                value={editData.productName}
-                onChange={(e) => setEditData({ ...editData, productName: e.target.value })}
-                placeholder="Enter product name"
-                autoComplete="off"
-              />
-            </div>
-          </div>
-          <div className="xp-form-row">
-            <div className="xp-form-field">
-              <label><FaPriceTag /> Selling Price (3ml)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editData.sellingPrice3ml || ''}
-                onChange={(e) => setEditData({ ...editData, sellingPrice3ml: e.target.value })}
-                placeholder="Enter selling price for 3ml"
-                autoComplete="off"
-              />
-            </div>
-            <div className="xp-form-field">
-              <label><FaPriceTag /> Selling Price (6ml)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editData.sellingPrice6ml || ''}
-                onChange={(e) => setEditData({ ...editData, sellingPrice6ml: e.target.value })}
-                placeholder="Enter selling price for 6ml"
-                autoComplete="off"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="xp-modal-footer">
-          <button className="xp-btn-cancel" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="xp-btn-primary"
-            onClick={onSubmit}
-            disabled={isSubmitting || !editData.productName.trim()}
-          >
-            {isSubmitting ? "Updating..." : "Update Product"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ============================================
 // BULK UPLOAD MODAL - UPDATED WITH SELLING PRICES
@@ -465,7 +497,7 @@ const BulkUploadModal = ({
 
             <p className="xp-upload-hint">
               {uploadType === 'products'
-                ? 'File should have columns: Product Name, Selling Price 3ml, Selling Price 6ml'
+                ? 'File should have columns: Product Name, Selling Price 3ml, Selling Price 6ml, Selling Price 12ml'
                 : 'File should have columns: Product Name, Quantity, Purchase Price'}
             </p>
 
@@ -555,6 +587,7 @@ const ErrorModal = ({
                         <>
                           <th>Sell Price 3ml</th>
                           <th>Sell Price 6ml</th>
+                          <th>Sell Price 12ml</th>
                         </>
                       )}
                       {bulkSuccessDetails[0]?.quantity !== undefined && (
@@ -576,6 +609,7 @@ const ErrorModal = ({
                           <>
                             <td>₹{item.sellingPrice3ml}</td>
                             <td>₹{item.sellingPrice6ml}</td>
+                            <td>₹{item.sellingPrice12ml}</td>
                           </>
                         )}
                         {item.quantity !== undefined && (
@@ -609,6 +643,7 @@ const ErrorModal = ({
                         <>
                           <th>Sell Price 3ml</th>
                           <th>Sell Price 6ml</th>
+                          <th>Sell Price 12ml</th>
                         </>
                       )}
                       {bulkErrors[0]?.quantity !== undefined && (
@@ -629,6 +664,7 @@ const ErrorModal = ({
                           <>
                             <td>{err.sellingPrice3ml || '-'}</td>
                             <td>{err.sellingPrice6ml || '-'}</td>
+                            <td>{err.sellingPrice12ml || '-'}</td>
                           </>
                         )}
                         {err.quantity !== undefined && (
@@ -1180,7 +1216,8 @@ const XPInventory = () => {
   const [newProduct, setNewProduct] = useState({
     productName: "",
     sellingPrice3ml: "",
-    sellingPrice6ml: ""
+    sellingPrice6ml: "",
+    sellingPrice12ml: ""
   });
 
   // ✅ UPDATED: Edit data with selling prices
@@ -1188,7 +1225,8 @@ const XPInventory = () => {
     xpId: "",
     productName: "",
     sellingPrice3ml: "",
-    sellingPrice6ml: ""
+    sellingPrice6ml: "",
+    sellingPrice12ml: ""
   });
 
   const [addStockData, setAddStockData] = useState({
@@ -1502,7 +1540,8 @@ const XPInventory = () => {
           body: JSON.stringify({
             productName: newProduct.productName.trim(),
             sellingPrice3ml: newProduct.sellingPrice3ml ? parseFloat(newProduct.sellingPrice3ml) : 0,
-            sellingPrice6ml: newProduct.sellingPrice6ml ? parseFloat(newProduct.sellingPrice6ml) : 0
+            sellingPrice6ml: newProduct.sellingPrice6ml ? parseFloat(newProduct.sellingPrice6ml) : 0,
+            sellingPrice12ml: newProduct.sellingPrice12ml ? parseFloat(newProduct.sellingPrice12ml) : 0
           })
         }
       );
@@ -1515,7 +1554,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setNewProduct({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "" });
+      setNewProduct({ productName: "", sellingPrice3ml: "", sellingPrice6ml: "", sellingPrice12ml: "" });
       setShowAddProductModal(false);
       await fetchInventory(currentPage, searchTerm, statusFilter);
       await fetchAlerts();
@@ -1627,7 +1666,8 @@ const XPInventory = () => {
           body: JSON.stringify({
             productName: editData.productName.trim(),
             sellingPrice3ml: editData.sellingPrice3ml ? parseFloat(editData.sellingPrice3ml) : undefined,
-            sellingPrice6ml: editData.sellingPrice6ml ? parseFloat(editData.sellingPrice6ml) : undefined
+            sellingPrice6ml: editData.sellingPrice6ml ? parseFloat(editData.sellingPrice6ml) : undefined,
+            sellingPrice12ml: editData.sellingPrice12ml ? parseFloat(editData.sellingPrice12ml) : undefined
           })
         }
       );
@@ -1640,7 +1680,7 @@ const XPInventory = () => {
       const result = await response.json();
       toast.success(result.message);
 
-      setEditData({ xpId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "" });
+      setEditData({ xpId: "", productName: "", sellingPrice3ml: "", sellingPrice6ml: "", sellingPrice12ml: "" });
       setShowEditModal(false);
       setSelectedProduct(null);
       await fetchInventory(currentPage, searchTerm, statusFilter);
@@ -1797,18 +1837,20 @@ const XPInventory = () => {
         'Product Name': err.productName || '',
         'Selling Price 3ml': err.sellingPrice3ml || '',
         'Selling Price 6ml': err.sellingPrice6ml || '',
+        'Selling Price 12ml': err.sellingPrice12ml || '',
         'Quantity': err.quantity || '',
         'Purchase Price': err.purchasePrice || '',
         'Error Reason': err.error || 'Unknown error'
       }));
 
       const worksheetData = [
-        ['Row', 'Product Name', 'Selling Price 3ml', 'Selling Price 6ml', 'Quantity', 'Purchase Price', 'Error Reason'],
+        ['Row', 'Product Name', 'Selling Price 3ml', 'Selling Price 6ml', 'Selling Price 12ml', 'Quantity', 'Purchase Price', 'Error Reason'],
         ...errorData.map(item => [
           item['Row'],
           item['Product Name'],
           item['Selling Price 3ml'],
           item['Selling Price 6ml'],
+          item['Selling Price 12ml'],
           item['Quantity'],
           item['Purchase Price'],
           item['Error Reason']
@@ -1820,6 +1862,7 @@ const XPInventory = () => {
       ws['!cols'] = [
         { wch: 8 },
         { wch: 35 },
+        { wch: 18 },
         { wch: 18 },
         { wch: 18 },
         { wch: 12 },
@@ -1915,7 +1958,8 @@ const XPInventory = () => {
       xpId: product.xpId,
       productName: product.productName,
       sellingPrice3ml: product.sellingPrice3ml || '',
-      sellingPrice6ml: product.sellingPrice6ml || ''
+      sellingPrice6ml: product.sellingPrice6ml || '',
+      sellingPrice12ml: product.sellingPrice12ml || ''
     });
     setShowEditModal(true);
   };
@@ -2044,6 +2088,7 @@ const XPInventory = () => {
                   </th>
                   <th>Sell Price 3ml</th>
                   <th>Sell Price 6ml</th>
+                  <th>Sell Price 12ml</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -2051,7 +2096,7 @@ const XPInventory = () => {
               <tbody>
                 {filteredInventory.length === 0 ? (
                   <tr>
-                    <td colSpan="7">
+                    <td colSpan="8">
                       <div className="xp-empty-state">
                         <FaBox className="xp-empty-icon" />
                         <p>No products found</p>
@@ -2096,6 +2141,7 @@ const XPInventory = () => {
                           </td>
                           <td className="xp-price-cell">₹{item.sellingPrice3ml || 0}</td>
                           <td className="xp-price-cell">₹{item.sellingPrice6ml || 0}</td>
+                          <td className="xp-price-cell">₹{item.sellingPrice12ml || 0}</td>
                           <td>
                             <span className={`xp-status-badge xp-status-${status.status}`}>
                               <span className="xp-status-dot"></span>
@@ -2124,7 +2170,7 @@ const XPInventory = () => {
 
                         {isExpanded && (
                           <tr className="xp-transaction-row">
-                            <td colSpan="7">
+                            <td colSpan="8">
                               <TransactionPanel
                                 transactions={transactionsByXpId[item.xpId]}
                                 isLoading={loadingTransactionsId === item.xpId}

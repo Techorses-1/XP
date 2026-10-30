@@ -332,7 +332,7 @@ const getTransactionsWithFilter = async (xpId, limit, page, hideInvoice) => {
 // ============================================
 router.post("/create-product", auth, checkInventoryPermission, async (req, res) => {
     try {
-        const { productName, sellingPrice3ml, sellingPrice6ml } = req.body;
+        const { productName, sellingPrice3ml, sellingPrice6ml, sellingPrice12ml } = req.body;
 
         if (!productName || productName.trim() === '') {
             await logFailed({
@@ -380,6 +380,7 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
             // ✅ NEW: Selling prices
             sellingPrice3ml: sellingPrice3ml !== undefined ? parseFloat(sellingPrice3ml) : 0,
             sellingPrice6ml: sellingPrice6ml !== undefined ? parseFloat(sellingPrice6ml) : 0,
+            sellingPrice12ml: sellingPrice12ml !== undefined ? parseFloat(sellingPrice12ml) : 0,
             createdBy: {
                 userId: req.user.userId,
                 userName: req.user.name,
@@ -407,7 +408,7 @@ router.post("/create-product", auth, checkInventoryPermission, async (req, res) 
             userEmail: req.user.email,
             action: 'Create Product',
             heading: 'Product Created Successfully',
-            description: `Product "${nameTrim}" created with density ${density}, sellingPrice3ml: ${product.sellingPrice3ml}, sellingPrice6ml: ${product.sellingPrice6ml}`
+            description: `Product "${nameTrim}" created with density ${density}, sellingPrice3ml: ${product.sellingPrice3ml}, sellingPrice6ml: ${product.sellingPrice6ml}, sellingPrice12ml: ${product.sellingPrice12ml}`
         });
 
         res.status(201).json({
@@ -607,7 +608,7 @@ router.post("/add-stock", auth, checkInventoryPermission, async (req, res) => {
 router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => {
     try {
         const { xpId } = req.params;
-        const { productName, sellingPrice3ml, sellingPrice6ml } = req.body;
+        const { productName, sellingPrice3ml, sellingPrice6ml, sellingPrice12ml } = req.body;
 
         const product = await XPInventory.findOne({ xpId });
         if (!product) {
@@ -680,6 +681,9 @@ router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => 
         if (sellingPrice6ml !== undefined) {
             updateData.sellingPrice6ml = parseFloat(sellingPrice6ml);
         }
+        if (sellingPrice12ml !== undefined) {
+            updateData.sellingPrice12ml = parseFloat(sellingPrice12ml);
+        }
 
         const updatedProduct = await XPInventory.findOneAndUpdate(
             { xpId },
@@ -694,7 +698,7 @@ router.put("/update/:xpId", auth, checkInventoryPermission, async (req, res) => 
             userEmail: req.user.email,
             action: 'Update Product',
             heading: 'Product Updated Successfully',
-            description: `Name changed to "${nameTrim}" with density ${density}, sellingPrice3ml: ${updatedProduct.sellingPrice3ml}, sellingPrice6ml: ${updatedProduct.sellingPrice6ml}`
+            description: `Name changed to "${nameTrim}" with density ${density}, sellingPrice3ml: ${updatedProduct.sellingPrice3ml}, sellingPrice6ml: ${updatedProduct.sellingPrice6ml}, sellingPrice12ml: ${updatedProduct.sellingPrice12ml}`
         });
 
         res.status(200).json({
@@ -818,7 +822,7 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
             const rowNumber = row.rowNumber;
 
             try {
-                const { productName, sellingPrice3ml, sellingPrice6ml } = row;
+                const { productName, sellingPrice3ml, sellingPrice6ml, sellingPrice12ml } = row;
 
                 if (!productName || productName.trim() === '') {
                     errors.push({ row: rowNumber, productName, error: 'Product name is required' });
@@ -846,6 +850,7 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
                     // ✅ NEW: Selling prices from Excel
                     sellingPrice3ml: sellingPrice3ml !== undefined && sellingPrice3ml !== '' ? parseFloat(sellingPrice3ml) : 0,
                     sellingPrice6ml: sellingPrice6ml !== undefined && sellingPrice6ml !== '' ? parseFloat(sellingPrice6ml) : 0,
+                    sellingPrice12ml: sellingPrice12ml !== undefined && sellingPrice12ml !== '' ? parseFloat(sellingPrice12ml) : 0,
                     createdBy: {
                         userId: req.user.userId,
                         userName: req.user.name,
@@ -871,7 +876,8 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
                     productName: nameTrim,
                     density: density,
                     sellingPrice3ml: product.sellingPrice3ml,
-                    sellingPrice6ml: product.sellingPrice6ml
+                    sellingPrice6ml: product.sellingPrice6ml,
+                    sellingPrice12ml: product.sellingPrice12ml
                 });
 
             } catch (error) {
@@ -900,6 +906,7 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
             'Density': item.density || 1000,
             'Selling Price 3ml': item.sellingPrice3ml || 0,
             'Selling Price 6ml': item.sellingPrice6ml || 0,
+            'Selling Price 12ml': item.sellingPrice12ml || 0,
             'Status': '✅ Added'
         }));
 
@@ -987,6 +994,7 @@ router.post("/bulk-upload-products", auth, checkInventoryPermission, upload.sing
         });
     }
 });
+
 
 // ============================================
 // BULK UPLOAD - INVENTORY (Name + Qty + Price) - WITH AUDIT
@@ -1369,6 +1377,7 @@ router.get("/export", auth, async (req, res) => {
             'Avg Purchase Price': `₹${Number(item.avgPrice).toFixed(2)}`,
             'Selling Price 3ml': `₹${Number(item.product.sellingPrice3ml || 0).toFixed(2)}`,
             'Selling Price 6ml': `₹${Number(item.product.sellingPrice6ml || 0).toFixed(2)}`,
+            'Selling Price 12ml': `₹${Number(item.product.sellingPrice12ml || 0).toFixed(2)}`,
             'Min Stock': item.product.minStock || 5,
             'Status': item.stockStatus,
             'Density': item.density || 1000
@@ -1453,6 +1462,7 @@ router.get("/export", auth, async (req, res) => {
             { wch: 40 },
             { wch: 12 },
             { wch: 18 },
+            { wch: 20 },
             { wch: 20 },
             { wch: 20 },
             { wch: 20 },

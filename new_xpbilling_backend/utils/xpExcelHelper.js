@@ -46,6 +46,7 @@ const parseExcel = (file, type) => {
             if (type === 'products') {
                 obj['Selling Price 3ml'] = row['Selling Price 3ml'] || row['sellingPrice3ml'] || row['Price 3ml'] || 0;
                 obj['Selling Price 6ml'] = row['Selling Price 6ml'] || row['sellingPrice6ml'] || row['Price 6ml'] || 0;
+                obj['Selling Price 12ml'] = row['Selling Price 12ml'] || row['sellingPrice12ml'] || row['Price 12ml'] || 0;
             } else {
                 obj['Quantity'] = row['Quantity'] || row['quantity'] || row['Qty'] || row['qty'] || 0;
                 obj['Purchase Price'] = row['Purchase Price'] || row['purchasePrice'] || row['Price'] || row['price'] || 0;
@@ -71,8 +72,10 @@ const parseExcel = (file, type) => {
                 // ✅ NEW: Read selling prices for products
                 const price3ml = row['Selling Price 3ml'] || row['sellingPrice3ml'] || row['Price 3ml'] || 0;
                 const price6ml = row['Selling Price 6ml'] || row['sellingPrice6ml'] || row['Price 6ml'] || 0;
+                const price12ml = row['Selling Price 12ml'] || row['sellingPrice12ml'] || row['Price 12ml'] || 0;
                 result.sellingPrice3ml = parseFloat(price3ml) || 0;
                 result.sellingPrice6ml = parseFloat(price6ml) || 0;
+                result.sellingPrice12ml = parseFloat(price12ml) || 0;
             } else {
                 const quantity = row['Quantity'] || 0;
                 const purchasePrice = row['Purchase Price'] || 0;
@@ -104,6 +107,7 @@ const parseExcel = (file, type) => {
             if (type === 'products') {
                 error.sellingPrice3ml = row.sellingPrice3ml || 0;
                 error.sellingPrice6ml = row.sellingPrice6ml || 0;
+                error.sellingPrice12ml = row.sellingPrice12ml || 0;
             } else {
                 error.quantity = row.quantity || 0;
                 error.purchasePrice = row.purchasePrice || 0;
@@ -138,6 +142,7 @@ const parseExcel = (file, type) => {
                     // ✅ NEW: Include selling prices
                     validatedRow.sellingPrice3ml = row.sellingPrice3ml || 0;
                     validatedRow.sellingPrice6ml = row.sellingPrice6ml || 0;
+                    validatedRow.sellingPrice12ml = row.sellingPrice12ml || 0;
                 } else {
                     validatedRow.quantity = row.quantity;
                     validatedRow.purchasePrice = row.purchasePrice;
@@ -161,6 +166,7 @@ const parseExcel = (file, type) => {
                 if (type === 'products') {
                     obj['Selling Price 3ml'] = row['Selling Price 3ml'] || row['sellingPrice3ml'] || row['Price 3ml'] || 0;
                     obj['Selling Price 6ml'] = row['Selling Price 6ml'] || row['sellingPrice6ml'] || row['Price 6ml'] || 0;
+                    obj['Selling Price 12ml'] = row['Selling Price 12ml'] || row['sellingPrice12ml'] || row['Price 12ml'] || 0;
                 } else {
                     obj['Quantity'] = row['Quantity'] || 0;
                     obj['Purchase Price'] = row['Purchase Price'] || 0;
@@ -182,9 +188,9 @@ const downloadTemplate = (res, type) => {
         if (type === 'products') {
             // ✅ UPDATED: Products template with selling prices
             templateData = [
-                { 'Product Name': 'Fresh Dark Knight', 'Selling Price 3ml': 800, 'Selling Price 6ml': 1200 },
-                { 'Product Name': 'Another Product', 'Selling Price 3ml': 750, 'Selling Price 6ml': 1100 },
-                { 'Product Name': 'Third Product', 'Selling Price 3ml': 900, 'Selling Price 6ml': 1350 }
+                { 'Product Name': 'Fresh Dark Knight', 'Selling Price 3ml': 800, 'Selling Price 6ml': 1200, 'Selling Price 12ml': 2000 },
+                { 'Product Name': 'Another Product', 'Selling Price 3ml': 750, 'Selling Price 6ml': 1100, 'Selling Price 12ml': 1800 },
+                { 'Product Name': 'Third Product', 'Selling Price 3ml': 900, 'Selling Price 6ml': 1350, 'Selling Price 12ml': 2200 }
             ];
         } else {
             templateData = [
@@ -222,6 +228,7 @@ const downloadErrorExcel = (errors, res) => {
             'Product Name': err.productName || '',
             'Selling Price 3ml': err.sellingPrice3ml !== undefined ? err.sellingPrice3ml : '',
             'Selling Price 6ml': err.sellingPrice6ml !== undefined ? err.sellingPrice6ml : '',
+            'Selling Price 12ml': err.sellingPrice12ml !== undefined ? err.sellingPrice12ml : '',
             'Quantity': err.quantity || '',
             'Purchase Price': err.purchasePrice || '',
             'Error Reason': err.error || err.notes || 'Unknown error'
@@ -230,6 +237,7 @@ const downloadErrorExcel = (errors, res) => {
         const worksheet = xlsx.utils.json_to_sheet(errorData);
         worksheet['!cols'] = [
             { wch: 30 },
+            { wch: 20 },
             { wch: 20 },
             { wch: 20 },
             { wch: 15 },

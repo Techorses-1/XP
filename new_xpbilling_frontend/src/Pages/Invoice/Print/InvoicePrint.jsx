@@ -331,7 +331,10 @@ const InvoicePrint = ({ invoice }) => {
                             {/* ✅ DISPENSER ITEMS */}
                             {hasDispenser && dispenserItems && dispenserItems.length > 0 && (
                                 dispenserItems.map((item, index) => {
-                                    const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                                    let price;
+                                    if (item.ml === 3) price = item.sellingPrice3ml;
+                                    else if (item.ml === 12) price = item.sellingPrice12ml;
+                                    else price = item.sellingPrice6ml;
                                     const finalPrice = item.finalPrice || 0;
 
                                     return (

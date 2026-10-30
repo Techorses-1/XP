@@ -60,7 +60,7 @@ const checkInvoicePermission = (req, res, next) => {
 // HELPER: Reduce Bottles Inventory
 // ============================================
 const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
-    const itemTypes = (mlSize === '3' || mlSize === '6')
+    const itemTypes = (mlSize === '3' || mlSize === '6' || mlSize === '12')
         ? ['Bottle', 'Cap', 'Roll on', 'Box']
         : (mlSize === '30' || mlSize === '60')
             ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -127,7 +127,7 @@ const reduceBottlesInventory = async (mlSize, quantity, user, transactionReason,
 // HELPER: Return Bottles Inventory (IN)
 // ============================================
 const returnBottlesInventory = async (mlSize, quantity, user, transactionReason, notes = '') => {
-    const itemTypes = (mlSize === '3' || mlSize === '6')
+    const itemTypes = (mlSize === '3' || mlSize === '6' || mlSize === '12')
         ? ['Bottle', 'Cap', 'Roll on', 'Box']
         : (mlSize === '30' || mlSize === '60')
             ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -1224,7 +1224,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
             // ✅ 3. Bottles — check each ml size
             for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
-                const bottleItems = (mlSize === '3' || mlSize === '6')
+                const mlSize = ml.toString();
+                const bottleItems = (mlSize === '3' || mlSize === '6' || mlSize === '12')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
                     : (mlSize === '30' || mlSize === '60')
                         ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -1287,8 +1288,8 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     });
                 }
 
-                if (![3, 6].includes(ml)) {
-                    console.log("❌ Invalid ML:", ml, "Must be 3 or 6");
+                if (![3, 6, 12].includes(ml)) {
+                    console.log("❌ Invalid ML:", ml, "Must be 3, 6, or 12");
                     await logFailed({
                         module: 'Invoice',
                         userId: req.user.userId,
@@ -1296,10 +1297,10 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                         userEmail: req.user.email,
                         action: 'Create',
                         heading: 'Invoice Creation Failed',
-                        description: 'ML must be 3 or 6'
+                        description: 'ML must be 3, 6, or 12'
                     });
                     return res.status(400).json({
-                        message: "ML must be 3 or 6"
+                        message: "ML must be 3, 6, or 12"
                     });
                 }
 
@@ -1360,7 +1361,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                 console.log(`  ✅ Stock sufficient`);
 
                 const mlSize = ml.toString();
-                const bottleItems = (mlSize === '3' || mlSize === '6')
+                const bottleItems = (mlSize === '3' || mlSize === '6' || mlSize === '12')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
                     : (mlSize === '30' || mlSize === '60')
                         ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -1385,7 +1386,14 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     console.log(`  ✅ ${itemType}: ${bottleStock.quantity} available`);
                 }
 
-                const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
+                let dbPrice;
+                if (ml === 3) {
+                    dbPrice = xpOil.sellingPrice3ml;
+                } else if (ml === 12) {
+                    dbPrice = xpOil.sellingPrice12ml;
+                } else {
+                    dbPrice = xpOil.sellingPrice6ml;
+                }
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
 
                 const itemDiscountPercent = discount !== undefined ? discount : 0;
@@ -1407,6 +1415,7 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
                     unitPrice: baseUnitPrice,
                     sellingPrice3ml: xpOil.sellingPrice3ml || 0,
                     sellingPrice6ml: xpOil.sellingPrice6ml || 0,
+                    sellingPrice12ml: xpOil.sellingPrice12ml || 0,
                     discount: itemDiscountPercent,
                     discountAmount: discountAmount,
                     originalPrice: originalTotal,
@@ -2104,7 +2113,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
             }
 
             for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
-                const bottleItems = (mlSize === '3' || mlSize === '6')
+                const bottleItems = (mlSize === '3' || mlSize === '6' || mlSize === '12')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
                     : (mlSize === '30' || mlSize === '60')
                         ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -2360,7 +2369,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     });
                 }
 
-                if (![3, 6].includes(ml)) {
+                if (![3, 6, 12].includes(ml)) {
                     console.log("❌ Invalid ML:", ml);
                     await logFailed({
                         module: 'Invoice',
@@ -2369,10 +2378,10 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                         userEmail: req.user.email,
                         action: 'Update',
                         heading: 'Invoice Update Failed',
-                        description: 'ML must be 3 or 6'
+                        description: 'ML must be 3, 6, or 12'
                     });
                     return res.status(400).json({
-                        message: "ML must be 3 or 6"
+                        message: "ML must be 3, 6, or 12"
                     });
                 }
 
@@ -2429,7 +2438,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                 }
 
                 const mlSize = ml.toString();
-                const bottleItems = (mlSize === '3' || mlSize === '6')
+                const bottleItems = (mlSize === '3' || mlSize === '6' || mlSize === '12')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
                     : (mlSize === '30' || mlSize === '60')
                         ? ['Bottle', 'Cap', 'Pump', 'Box', 'collar']
@@ -2453,7 +2462,14 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     }
                 }
 
-                const dbPrice = ml === 3 ? xpOil.sellingPrice3ml : xpOil.sellingPrice6ml;
+                let dbPrice;
+                if (ml === 3) {
+                    dbPrice = xpOil.sellingPrice3ml;
+                } else if (ml === 12) {
+                    dbPrice = xpOil.sellingPrice12ml;
+                } else {
+                    dbPrice = xpOil.sellingPrice6ml;
+                }
                 const baseUnitPrice = unitPrice !== undefined && unitPrice > 0 ? unitPrice : dbPrice;
 
                 const itemDiscountPercent = discount !== undefined ? discount : 0;
@@ -2469,6 +2485,7 @@ router.put("/update/:invoiceId", auth, checkInvoicePermission, async (req, res) 
                     unitPrice: baseUnitPrice,
                     sellingPrice3ml: xpOil.sellingPrice3ml || 0,
                     sellingPrice6ml: xpOil.sellingPrice6ml || 0,
+                    sellingPrice12ml: xpOil.sellingPrice12ml || 0,
                     discount: itemDiscountPercent,
                     discountAmount: discountAmount,
                     originalPrice: originalTotal,
@@ -3354,7 +3371,14 @@ router.get("/export", auth, async (req, res) => {
                 }
 
                 for (const item of inv.dispenserItems) {
-                    const pricePerUnit = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                    let pricePerUnit;
+                    if (item.ml === 3) {
+                        pricePerUnit = item.sellingPrice3ml;
+                    } else if (item.ml === 12) {
+                        pricePerUnit = item.sellingPrice12ml;
+                    } else {
+                        pricePerUnit = item.sellingPrice6ml;
+                    }
                     detailsData.push({
                         'Invoice #': '',
                         'Date': '',

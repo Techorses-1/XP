@@ -275,7 +275,10 @@ const InvoiceDetailsModal = ({
                                             </thead>
                                             <tbody>
                                                 {invoice.dispenserItems.map((item, idx) => {
-                                                    const dbPrice = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                                                    let dbPrice;
+                                                    if (item.ml === 3) dbPrice = item.sellingPrice3ml;
+                                                    else if (item.ml === 12) dbPrice = item.sellingPrice12ml;
+                                                    else dbPrice = item.sellingPrice6ml;
                                                     const unitPrice = item.unitPrice || dbPrice;
                                                     const discountPercent = item.discount || 0;
                                                     const discountAmt = (unitPrice * discountPercent) / 100;
@@ -885,7 +888,10 @@ const Invoice = () => {
         let dispFinalTotal = 0;
 
         dispenserItems.forEach(item => {
-            const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+            let price;
+            if (item.ml === 3) price = item.sellingPrice3ml;
+            else if (item.ml === 12) price = item.sellingPrice12ml;
+            else price = item.sellingPrice6ml;
             const unitPrice = item.unitPrice || price;
             const itemDiscountPercent = item.discount || 0;
             const discountAmt = (unitPrice * itemDiscountPercent) / 100;
@@ -1183,7 +1189,11 @@ const Invoice = () => {
             return;
         }
 
-        const defaultUnitPrice = ml === 3 ? dispenserSelect.data?.sellingPrice3ml : dispenserSelect.data?.sellingPrice6ml;
+        let defaultUnitPrice;
+        if (ml === 3) defaultUnitPrice = dispenserSelect.data?.sellingPrice3ml;
+        else if (ml === 12) defaultUnitPrice = dispenserSelect.data?.sellingPrice12ml;
+        else defaultUnitPrice = dispenserSelect.data?.sellingPrice6ml;
+
 
         setDispenserItems([
             ...dispenserItems,
@@ -1196,6 +1206,8 @@ const Invoice = () => {
                 unitPrice: defaultUnitPrice || 0,
                 sellingPrice3ml: dispenserSelect.data?.sellingPrice3ml || 0,
                 sellingPrice6ml: dispenserSelect.data?.sellingPrice6ml || 0,
+                sellingPrice12ml: dispenserSelect.data?.sellingPrice12ml || 0,
+
                 discount: 0
             }
         ]);
@@ -1231,12 +1243,15 @@ const Invoice = () => {
     const handleUpdateDispenserML = (index, newMl) => {
         const updatedItems = [...dispenserItems];
         const ml = parseInt(newMl);
-        if (!isNaN(ml) && (ml === 3 || ml === 6)) {
+        if (!isNaN(ml) && (ml === 3 || ml === 6 || ml === 12)) {
             const item = updatedItems[index];
             const newTotalML = ml * item.quantity;
             item.ml = ml;
             item.totalML = newTotalML;
-            const price = ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+            let price;
+            if (ml === 3) price = item.sellingPrice3ml;
+            else if (ml === 12) price = item.sellingPrice12ml;
+            else price = item.sellingPrice6ml;
             item.unitPrice = price || item.unitPrice || 0;
             setDispenserItems(updatedItems);
         }
@@ -1859,9 +1874,10 @@ const Invoice = () => {
                     ml: item.ml,
                     quantity: item.quantity,
                     totalML: item.totalML,
-                    unitPrice: item.unitPrice || (item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml),
+                    unitPrice: item.unitPrice || (item.ml === 3 ? item.sellingPrice3ml : item.ml === 12 ? item.sellingPrice12ml : item.sellingPrice6ml),
                     sellingPrice3ml: item.sellingPrice3ml || 0,
                     sellingPrice6ml: item.sellingPrice6ml || 0,
+                    sellingPrice12ml: item.sellingPrice12ml || 0,
                     discount: item.discount || 0
                 }));
                 setDispenserItems(items);
@@ -2187,7 +2203,7 @@ const Invoice = () => {
     const dispenserOptions = dispenserOils.map(o => {
         return {
             value: o.xpId,
-            label: `${o.productName} ${o.sellingPrice3ml > 0 ? `(3ml: ₹${o.sellingPrice3ml})` : ''} ${o.sellingPrice6ml > 0 ? `(6ml: ₹${o.sellingPrice6ml})` : ''}`,
+            label: `${o.productName} ${o.sellingPrice3ml > 0 ? `(3ml: ₹${o.sellingPrice3ml})` : ''} ${o.sellingPrice6ml > 0 ? `(6ml: ₹${o.sellingPrice6ml})` : ''} ${o.sellingPrice12ml > 0 ? `(12ml: ₹${o.sellingPrice12ml})` : ''}`,
             data: o
         };
     });
@@ -2645,6 +2661,8 @@ const Invoice = () => {
                                         <option value="">Select ML</option>
                                         <option value="3">3 ml</option>
                                         <option value="6">6 ml</option>
+                                        <option value="12">12 ml</option>
+
                                     </select>
                                 </div>
                                 <div className="inv-form-field inv-form-field-narrow">
@@ -2687,7 +2705,10 @@ const Invoice = () => {
                                             </thead>
                                             <tbody>
                                                 {dispenserItems.map((item, index) => {
-                                                    const price = item.ml === 3 ? item.sellingPrice3ml : item.sellingPrice6ml;
+                                                    let price;
+                                                    if (item.ml === 3) price = item.sellingPrice3ml;
+                                                    else if (item.ml === 12) price = item.sellingPrice12ml;
+                                                    else price = item.sellingPrice6ml;
                                                     const unitPrice = item.unitPrice || price;
                                                     const discountAmt = (unitPrice * (item.discount || 0)) / 100;
                                                     const finalUnitPrice = unitPrice - discountAmt;

@@ -2314,3 +2314,14 @@ $border-radius-sm: 8px;
         }
     }
 }
+
+// ── Field hint text (under inputs in modals) ──
+.xp-field-hint {
+    display: block;
+    margin-top: 5px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: #aab0bc;
+    line-height: 1.4;
+}
