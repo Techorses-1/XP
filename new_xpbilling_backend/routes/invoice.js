@@ -1224,7 +1224,6 @@ router.post("/create", auth, checkInvoicePermission, async (req, res) => {
 
             // ✅ 3. Bottles — check each ml size
             for (const [mlSize, totalQty] of Object.entries(aggregatedBottles)) {
-                const mlSize = ml.toString();
                 const bottleItems = (mlSize === '3' || mlSize === '6' || mlSize === '12')
                     ? ['Bottle', 'Cap', 'Roll on', 'Box']
                     : (mlSize === '30' || mlSize === '60')
