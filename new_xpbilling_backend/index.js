@@ -78,7 +78,7 @@ app.use('/logs', logsRoutes);
 
 // Test route
 app.get("/", (req, res) => {
-    res.send("New Updated  XP Billing Software updated is Running OK!");
+    res.send("New Updated XP Billing Software updated and Running Good!");
 });
 
 const PORT = process.env.PORT || 4000;
